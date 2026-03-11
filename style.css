@@ -309,3 +309,27 @@ body {
 #spy-hof-area .hof-card {
     min-width: 160px; /* Zapobiega ściskaniu się kart */
 }
+
+/* =========================================
+   KARTY TOTS I ANIMACJA KONFETTI
+   ========================================= */
+.fifa-card {
+    background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 50%, #100012 100%);
+    border: 2px solid #ffd700; border-radius: 10px; width: 90px; height: 135px;
+    position: relative; color: white; box-shadow: 0 5px 15px rgba(0,0,0,0.6);
+    display: flex; flex-direction: column; align-items: center; overflow: hidden;
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); margin: 0 5px;
+}
+.fifa-card:hover { transform: scale(1.15) translateY(-10px); z-index: 20; box-shadow: 0 10px 25px rgba(255, 215, 0, 0.4); }
+.fifa-rating { position: absolute; top: 5px; left: 8px; font-size: 18px; font-weight: 900; color: #ffd700; line-height: 1; text-shadow: 1px 1px 2px black;}
+.fifa-pos { position: absolute; top: 25px; left: 8px; font-size: 11px; font-weight: bold; color: #ccc; text-shadow: 1px 1px 2px black;}
+.fifa-img { width: 65px; height: 65px; margin-top: 35px; background: url('https://cdn-icons-png.flaticon.com/512/149/149071.png') no-repeat center/contain; opacity: 0.8; filter: drop-shadow(0 4px 2px rgba(0,0,0,0.8)); }
+.fifa-name { background: rgba(0,0,0,0.85); width: 100%; position: absolute; bottom: 0; padding: 6px 0; font-size: 11px; font-weight: bold; text-align: center; text-transform: uppercase; letter-spacing: 0.5px; color: #ffd700; border-top: 1px solid rgba(255, 215, 0, 0.3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.confetti-piece {
+    position: fixed; top: -10px; z-index: 9999; width: 10px; height: 20px;
+    animation: fall linear forwards;
+}
+@keyframes fall {
+    to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}

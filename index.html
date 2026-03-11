@@ -127,11 +127,15 @@
                 <h2 style="margin-top: 0;">Hall of Fame 🌟</h2>
                 <div id="hall-of-fame-container" class="hof-panel"></div>
                 <hr style="border: 1px solid rgba(255,255,255,0.2); margin: 30px 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <h2 style="margin:0;">Twoja Drużyna Sezonu (Dream Team) 🏆</h2>
-                    <button id="download-pitch-btn" class="btn-primary" style="background-color: #28a745; font-size: 14px; padding: 8px 15px;">📸 Pobierz Zdjęcie</button>
+                
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                    <h2 id="dream-team-title" style="margin:0;">Twoja Drużyna Sezonu 🏆</h2>
+                    <div>
+                        <button id="finish-season-btn" class="btn-primary" style="background-color: #ffd700; color: #100012; font-size: 14px; padding: 8px 15px; font-weight: bold; border: 1px solid #cca100;">🎉 Zakończ Sezon</button>
+                        <button id="download-pitch-btn" class="btn-primary" style="background-color: #28a745; font-size: 14px; padding: 8px 15px;">📸 Pobierz Zdjęcie</button>
+                    </div>
                 </div>
-                <p>Najlepsza 11-stka złożona z piłkarzy o <strong>najwyższej średniej punktów</strong>. <em>*Min. 3 występy.</em></p>
+                <p id="dream-team-desc">Najlepsza 11-stka złożona z piłkarzy o najwyższej średniej punktów. <em>*Min. 3 występy.</em></p>
                 <div id="pitch-container" class="football-pitch"></div>
             </div>
 

@@ -17,7 +17,8 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let globalArchive = [];
-let globalUsername = "Menedżer"; 
+let globalUsername = "Menedżer";
+let globalSeasonFinished = false; 
 let currentGW = 1; 
 
 const authScreen = document.getElementById('auth-screen');
@@ -66,20 +67,20 @@ auth.onAuthStateChanged((user) => {
         
         db.collection("users").doc(user.uid).get().then((doc) => {
             if (doc.exists) {
-                // Konto już istnieje w bazie
                 globalArchive = doc.data().archive || [];
                 globalUsername = doc.data().username || "Menedżer";
+                globalSeasonFinished = doc.data().seasonFinished || false;
             } else {
-                // PIERWSZE LOGOWANIE - Admin założył konto, więc tworzymy mu miejsce w bazie!
                 globalArchive = [];
                 globalUsername = inputName || user.email.split('@')[0];
+                globalSeasonFinished = false;
                 db.collection("users").doc(user.uid).set({
                     username: globalUsername,
-                    archive: []
+                    archive: [],
+                    seasonFinished: false
                 });
             }
             
-            // Uruchomienie aplikacji
             authScreen.style.display = 'none';
             mainApp.style.display = 'block';
             
@@ -270,10 +271,10 @@ function saveGameweek(gwNumber, squad, optimalData, userData, chip) {
     const gwData = { gwNumber, squad, optimalData, userData, chip };
     if (index >= 0) globalArchive[index] = gwData; else globalArchive.push(gwData);
     
-    // Zapisujemy, ale podajemy 'username' z pamięci!
     db.collection("users").doc(user.uid).set({
         username: globalUsername, 
-        archive: globalArchive
+        archive: globalArchive,
+        seasonFinished: globalSeasonFinished 
     }).then(() => {
         updatePlayerDatalist(); 
         renderWelcomeStats(); 
@@ -338,7 +339,7 @@ function renderGameweekTabs() {
 }
 
 function generateLineupHtml(squadList, isOptimalView = false) {
-    let html = '<ul style="list-style-type: none; padding-left: 0;">';
+    let html = '<ul style="list-style-type: none; padding-left: 0; color: #333;">';
     const sortOrder = { "GK": 1, "DEF": 2, "MID": 3, "FWD": 4 };
     squadList.sort((a, b) => sortOrder[a.position] - sortOrder[b.position]).forEach(p => {
         let isCap = isOptimalView ? p.isOptimalCaptain : p.isCaptain;
@@ -347,7 +348,7 @@ function generateLineupHtml(squadList, isOptimalView = false) {
         let injText = p.injured ? ' <span style="color:red; font-size:12px;">(🚑)</span>' : '';
         let dgwText = p.isDGW ? ' <span style="color:blue; font-size:12px;">(🔄)</span>' : '';
         let displayPoints = isOptimalView ? p.displayPts : p.points;
-        html += `<li style="margin-bottom: 4px;"><strong style="color:var(--fpl-green); width: 35px; display: inline-block;">${p.position}</strong> ${p.name}: <strong>${displayPoints} pkt</strong>${extraIcon}${injText}${dgwText}</li>`;
+        html += `<li style="margin-bottom: 4px;"><strong style="color:#198754; width: 35px; display: inline-block;">${p.position}</strong> ${p.name}: <strong>${displayPoints} pkt</strong>${extraIcon}${injText}${dgwText}</li>`;
     });
     html += '</ul>';
     return html;
@@ -490,7 +491,7 @@ function renderGlobalStatsAndChart() {
             labels: gwLabels,
             datasets: [
                 { label: 'Twój Wynik', data: userPtsData, borderColor: '#e90052', backgroundColor: 'rgba(233, 0, 82, 0.1)', borderWidth: 3, tension: 0.3, fill: true },
-                { label: 'Optymalny Wynik', data: optPtsData, borderColor: '#00ffff', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], tension: 0.3 }
+                { label: 'Optymal Wynik', data: optPtsData, borderColor: '#00ffff', backgroundColor: 'transparent', borderWidth: 2, borderDash: [5, 5], tension: 0.3 }
             ]
         },
         options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, scales: { y: { beginAtZero: true } } }
@@ -661,10 +662,40 @@ function renderDreamTeam() {
         else if (p.position === 'FWD' && best11.FWD.length < 3) { best11.FWD.push(p); remainingSlots--; }
     }
 
+    const btn = document.getElementById('finish-season-btn');
+    const title = document.getElementById('dream-team-title');
+    const desc = document.getElementById('dream-team-desc');
+    
+    if(globalSeasonFinished) {
+        btn.innerText = "↩️ Cofnij Zakończenie";
+        btn.style.backgroundColor = "#ccc"; btn.style.color = "#333";
+        title.innerText = "Drużyna Sezonu (TOTS) 🃏";
+        title.style.color = "#ffd700";
+        desc.innerHTML = "Twoja ostateczna jedenastka wygenerowana jako ekskluzywne karty <strong>Ultimate Team</strong>!";
+    } else {
+        btn.innerText = "🎉 Zakończ Sezon";
+        btn.style.backgroundColor = "#ffd700"; btn.style.color = "#100012";
+        title.innerText = "Twoja Drużyna Sezonu (Dream Team) 🏆";
+        title.style.color = "white";
+        desc.innerHTML = "Najlepsza 11-stka złożona z piłkarzy o najwyższej średniej punktów. <em>*Min. 3 występy.</em>";
+    }
+
     const createRow = (players) => {
         let rowHtml = '<div class="pitch-row">';
         players.forEach(p => {
-            rowHtml += `<div class="pitch-player"><div class="shirt-wrapper pos-${p.position}">👕</div><div class="pitch-name">${p.name}</div><div class="pitch-pts"><div class="pitch-avg">${p.average} śr.</div><div class="pitch-sum">(${p.totalPoints} pkt)</div></div></div>`;
+            if(globalSeasonFinished) {
+                rowHtml += `
+                <div class="pitch-player" style="width: auto;">
+                    <div class="fifa-card">
+                        <div class="fifa-rating">${p.average}</div>
+                        <div class="fifa-pos">${p.position}</div>
+                        <div class="fifa-img"></div>
+                        <div class="fifa-name" title="${p.name}">${p.name}</div>
+                    </div>
+                </div>`;
+            } else {
+                rowHtml += `<div class="pitch-player"><div class="shirt-wrapper pos-${p.position}">👕</div><div class="pitch-name">${p.name}</div><div class="pitch-pts"><div class="pitch-avg">${p.average} śr.</div><div class="pitch-sum">(${p.totalPoints} pkt)</div></div></div>`;
+            }
         });
         rowHtml += '</div>';
         return rowHtml;
@@ -798,7 +829,8 @@ document.getElementById('import-file').addEventListener('change', function(event
                 globalArchive = importedData;
                 db.collection("users").doc(user.uid).set({
                     username: globalUsername, // Pilnujemy, żeby nie nadpisało loginu
-                    archive: globalArchive
+                    archive: globalArchive,
+                    seasonFinished: globalSeasonFinished
                 }).then(() => {
                     alert("Pomyślnie wczytano sezon z pliku do Chmury!");
                     renderSummaryTable(); renderTransfers(); updatePlayerDatalist(); renderWelcomeStats();
@@ -905,7 +937,8 @@ document.getElementById('clear-btn').addEventListener('click', function() {
         const user = auth.currentUser;
         if(user) {
             globalArchive = [];
-            db.collection("users").doc(user.uid).set({ username: globalUsername, archive: [] }).then(() => {
+            globalSeasonFinished = false; // Zerujemy też sezon!
+            db.collection("users").doc(user.uid).set({ username: globalUsername, archive: [], seasonFinished: false }).then(() => {
                 renderSummaryTable(); renderTransfers(); updatePlayerDatalist(); renderWelcomeStats();
                 document.getElementById('pitch-container').innerHTML = '';
                 document.getElementById('global-pain-panel').innerHTML = '';
@@ -935,6 +968,7 @@ function renderLeagueTable() {
             let totalOptPts = 0;
             let gwsPlayed = 0;
             let archiveData = data.archive || [];
+            let hasFinished = data.seasonFinished || false; // Pobieramy status znajomego
 
             if (archiveData.length > 0) {
                 gwsPlayed = archiveData.length;
@@ -945,7 +979,7 @@ function renderLeagueTable() {
             }
 
             let displayName = data.username || 'Nieznany Menedżer';
-            leaderboard.push({ name: displayName, gws: gwsPlayed, points: totalUserPts, optPoints: totalOptPts, archive: archiveData });
+            leaderboard.push({ name: displayName, gws: gwsPlayed, points: totalUserPts, optPoints: totalOptPts, archive: archiveData, seasonFinished: hasFinished });
         });
 
         leaderboard.sort((a, b) => b.points - a.points);
@@ -958,7 +992,8 @@ function renderLeagueTable() {
             tr.className = 'league-row'; 
             tr.title = "Kliknij, aby podejrzeć skład i statystyki gracza!";
             
-            tr.addEventListener('click', () => openSpyModal(player.name, player.archive));
+            // Przekazujemy status sezonu do okienka
+            tr.addEventListener('click', () => openSpyModal(player.name, player.archive, player.seasonFinished));
 
             tr.innerHTML = `
                 <td style="color: #333; font-weight: bold; text-align: center;">${index + 1}</td>
@@ -994,7 +1029,8 @@ document.querySelectorAll('.spy-tab').forEach(btn => {
 
 let currentSpyArchive = [];
 
-function openSpyModal(managerName, archive) {
+// Dodajemy parametr isFinished
+function openSpyModal(managerName, archive, isFinished = false) {
     document.getElementById('spy-modal-title').innerText = `Profil Menedżera: ${managerName}`;
     currentSpyArchive = archive.sort((a, b) => b.gwNumber - a.gwNumber); 
     
@@ -1015,8 +1051,9 @@ function openSpyModal(managerName, archive) {
         
         renderSpySingleGW(currentSpyArchive[0]);
         renderSpyTransfers(currentSpyArchive);
-        renderSpyDreamTeam(currentSpyArchive);
-        renderSpyHallOfFame(currentSpyArchive); // NOWOŚĆ
+        // Przekazujemy status do Dream Teamu Skauta
+        renderSpyDreamTeam(currentSpyArchive, isFinished);
+        renderSpyHallOfFame(currentSpyArchive); 
     }
 
     document.querySelector('.spy-tab[data-target="spy-gws"]').click();
@@ -1038,17 +1075,17 @@ function renderSpySingleGW(gw) {
     if (activeCap && activeCap.injured && gw.userData.userVCap) activeCap = gw.userData.userVCap;
 
     area.innerHTML = `
-        <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; border-left: 5px solid var(--fpl-green); border: 1px solid rgba(255,255,255,0.05); border-left: 5px solid var(--fpl-green);">
-            <div><h3 style="margin:0; color:#aaa;">Wynik Kolejki</h3><span style="font-size: 24px; font-weight: bold; color: var(--fpl-green);">${gw.userData.points} pkt</span></div>
-            <div style="text-align:right;"><h3 style="margin:0; color:#aaa;">Użyty Chip</h3><span style="font-size: 18px; font-weight: bold; color: var(--fpl-blue);">${gw.chip.toUpperCase()}</span></div>
+        <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid var(--fpl-green);">
+            <div><h3 style="margin:0; color:var(--fpl-purple);">Wynik Kolejki</h3><span style="font-size: 24px; font-weight: bold; color: var(--fpl-green);">${gw.userData.points} pkt</span></div>
+            <div style="text-align:right;"><h3 style="margin:0; color:#555;">Użyty Chip</h3><span style="font-size: 18px; font-weight: bold; color: #333;">${gw.chip.toUpperCase()}</span></div>
         </div>
         <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1);">
-                <h4 style="margin-top:0; color: var(--fpl-green);">👕 Wyjściowy Skład</h4>
+            <div style="flex: 1; min-width: 250px; background: #f0f4f8; color: #333; padding: 15px; border-radius: 5px;">
+                <h4 style="margin-top:0; color: var(--fpl-purple);">👕 Wyjściowy Skład</h4>
                 ${generateLineupHtml(userStarters, false)}
             </div>
-            <div style="flex: 1; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.05);">
-                <h4 style="margin-top:0; color: #ccc;">🪑 Ławka Rezerwowych</h4>
+            <div style="flex: 1; min-width: 250px; background: #e6f7ff; color: #333; padding: 15px; border-radius: 5px; border: 1px solid #91d5ff;">
+                <h4 style="margin-top:0; color: #555;">🪑 Ławka Rezerwowych</h4>
                 ${generateLineupHtml(userBench, false)}
             </div>
         </div>
@@ -1071,13 +1108,12 @@ function renderSpyTransfers(archive) {
         if (transfersIn.length > 0 || transfersOut.length > 0) {
             let inHtml = transfersIn.map(p => `🟢 Przyszli: ${p.name} (${p.position})`).join('<br>');
             let outHtml = transfersOut.map(p => `🔴 Odeszli: ${p.name} (${p.position})`).join('<br>');
-            area.innerHTML += `<div style="background: white; padding:15px; border-radius:5px; margin-bottom:10px; border: 1px solid rgba(255,255,255,0.1); border-left: 4px solid var(--fpl-blue);"><h4 style="margin:0 0 10px 0; color: var(--fpl-purple);">Przed GW ${currGW.gwNumber}</h4><p style="color:var(--fpl-green); margin:0; font-weight:bold;">${inHtml}</p><p style="color:#ff4b4b; margin:5px 0 0 0; font-weight:bold;">${outHtml}</p></div>`;
+            area.innerHTML += `<div style="background: white; color: #333; padding:15px; border-radius:5px; margin-bottom:10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid var(--fpl-blue);"><h4 style="margin:0 0 10px 0; color: var(--fpl-purple);">Przed GW ${currGW.gwNumber}</h4><p style="color:#28a745; margin:0; font-weight:bold;">${inHtml}</p><p style="color:#dc3545; margin:5px 0 0 0; font-weight:bold;">${outHtml}</p></div>`;
         }
     }
     if (area.innerHTML === '') area.innerHTML = '<p>Brak zrobionych transferów.</p>';
 }
 
-// NOWOŚĆ: HOF u Skauta
 function renderSpyHallOfFame(archive) {
     const container = document.getElementById('spy-hof-area');
     if (archive.length === 0) { container.innerHTML = '<p>Brak danych.</p>'; return; }
@@ -1139,7 +1175,8 @@ function renderSpyHallOfFame(archive) {
     `;
 }
 
-function renderSpyDreamTeam(archive) {
+// Odbieramy parametr isFinished
+function renderSpyDreamTeam(archive, isFinished = false) {
     const pitch = document.getElementById('spy-pitch-area');
     pitch.innerHTML = '';
     const playerStats = {};
@@ -1179,9 +1216,67 @@ function renderSpyDreamTeam(archive) {
 
     const createRow = (players) => {
         let rowHtml = '<div class="pitch-row">';
-        players.forEach(p => { rowHtml += `<div class="pitch-player"><div class="shirt-wrapper pos-${p.position}">👕</div><div class="pitch-name">${p.name}</div><div class="pitch-pts"><div class="pitch-avg">${p.average}</div></div></div>`; });
+        players.forEach(p => { 
+            // Jeżeli znajomy skończył sezon, rysujemy u niego KARTY
+            if(isFinished) {
+                rowHtml += `
+                <div class="pitch-player" style="width: auto;">
+                    <div class="fifa-card">
+                        <div class="fifa-rating">${p.average}</div>
+                        <div class="fifa-pos">${p.position}</div>
+                        <div class="fifa-img"></div>
+                        <div class="fifa-name" title="${p.name}">${p.name}</div>
+                    </div>
+                </div>`;
+            } else {
+                rowHtml += `<div class="pitch-player"><div class="shirt-wrapper pos-${p.position}">👕</div><div class="pitch-name">${p.name}</div><div class="pitch-pts"><div class="pitch-avg">${p.average}</div></div></div>`; 
+            }
+        });
         return rowHtml + '</div>';
     };
 
     pitch.innerHTML += createRow(best11.FWD) + createRow(best11.MID) + createRow(best11.DEF) + createRow(best11.GK);
+}
+
+// ==========================================
+// 8. LOGIKA ZAKOŃCZENIA SEZONU I KONFETTI
+// ==========================================
+function shootConfetti() {
+    const colors = ['#ffd700', '#02efff', '#e90052', '#00ff87', '#ffffff'];
+    for(let i=0; i<100; i++) {
+        let conf = document.createElement('div');
+        conf.className = 'confetti-piece';
+        conf.style.left = Math.random() * 100 + 'vw';
+        conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        conf.style.animationDuration = (Math.random() * 3 + 2) + 's';
+        conf.style.animationDelay = (Math.random() * 2) + 's';
+        document.body.appendChild(conf);
+        setTimeout(() => conf.remove(), 5000); 
+    }
+}
+
+document.getElementById('finish-season-btn').addEventListener('click', function() {
+    const user = auth.currentUser;
+    if(!user) return;
+
+    if(!globalSeasonFinished) {
+        if(confirm("Czy na pewno chcesz oficjalnie zakończyć sezon? Wygenerujemy Twoją ostateczną Kartę Historii i odblokujemy karty Ultimate Team!")) {
+            globalSeasonFinished = true;
+            shootConfetti();
+            updateSeasonStatusInDB(user.uid);
+        }
+    } else {
+        if(confirm("Czy chcesz cofnąć zakończenie sezonu i wrócić do edycji? Karty wrócą do zwykłych koszulek.")) {
+            globalSeasonFinished = false;
+            updateSeasonStatusInDB(user.uid);
+        }
+    }
+});
+
+function updateSeasonStatusInDB(uid) {
+    db.collection("users").doc(uid).update({
+        seasonFinished: globalSeasonFinished
+    }).then(() => {
+        renderDreamTeam(); 
+    });
 }

@@ -209,17 +209,18 @@
 <div id="spy-modal" class="spy-modal">
         <div class="spy-modal-content">
             <span class="spy-close" id="spy-close-btn">&times;</span>
-            <h2 id="spy-modal-title" style="color: var(--fpl-purple); margin-top: 0;">Profil: </h2>
+            <h2 id="spy-modal-title" style="color: var(--fpl-green); margin-top: 0;">Profil: </h2>
             
             <div class="spy-tabs">
-                <button class="spy-tab active" data-target="spy-gws">Kolejki (What-if)</button>
+                <button class="spy-tab active" data-target="spy-gws">Kolejki</button>
                 <button class="spy-tab" data-target="spy-transfers">Transfery</button>
                 <button class="spy-tab" data-target="spy-dreamteam">Dream Team</button>
+                <button class="spy-tab" data-target="spy-hof">Hall of Fame 🌟</button>
             </div>
 
             <div id="spy-gws" class="spy-section active-spy">
                 <div class="spy-gw-select-container">
-                    <label style="font-weight: bold; color: var(--fpl-purple);">Wybierz kolejkę:</label>
+                    <label style="font-weight: bold; color: var(--fpl-green);">Wybierz kolejkę:</label>
                     <select id="spy-gw-dropdown"></select>
                 </div>
                 <div id="spy-gw-render-area"></div>
@@ -229,6 +230,10 @@
 
             <div id="spy-dreamteam" class="spy-section">
                 <div id="spy-pitch-area" class="football-pitch" style="min-height: 450px;"></div>
+            </div>
+
+            <div id="spy-hof" class="spy-section">
+                <div id="spy-hof-area" class="hof-panel"></div>
             </div>
         </div>
     </div>

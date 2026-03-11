@@ -338,8 +338,8 @@ function renderGameweekTabs() {
 }
 
 function generateLineupHtml(squadList, isOptimalView = false) {
+    let html = '<ul style="list-style-type: none; padding-left: 0;">';
     const sortOrder = { "GK": 1, "DEF": 2, "MID": 3, "FWD": 4 };
-    let html = '<ul style="list-style-type: none; padding-left: 0; color: #333;">';
     squadList.sort((a, b) => sortOrder[a.position] - sortOrder[b.position]).forEach(p => {
         let isCap = isOptimalView ? p.isOptimalCaptain : p.isCaptain;
         let isVCap = !isOptimalView && p.isVCaptain ? ' <span style="color:gray;">🥈</span>' : '';
@@ -347,7 +347,7 @@ function generateLineupHtml(squadList, isOptimalView = false) {
         let injText = p.injured ? ' <span style="color:red; font-size:12px;">(🚑)</span>' : '';
         let dgwText = p.isDGW ? ' <span style="color:blue; font-size:12px;">(🔄)</span>' : '';
         let displayPoints = isOptimalView ? p.displayPts : p.points;
-        html += `<li><strong style="color:var(--fpl-purple);">${p.position}</strong> - ${p.name}: <strong>${displayPoints} pkt</strong>${extraIcon}${injText}${dgwText}</li>`;
+        html += `<li style="margin-bottom: 4px;"><strong style="color:var(--fpl-green); width: 35px; display: inline-block;">${p.position}</strong> ${p.name}: <strong>${displayPoints} pkt</strong>${extraIcon}${injText}${dgwText}</li>`;
     });
     html += '</ul>';
     return html;
@@ -955,10 +955,9 @@ function renderLeagueTable() {
         leaderboard.forEach((player, index) => {
             let medal = index === 0 ? '🥇 ' : index === 1 ? '🥈 ' : index === 2 ? '🥉 ' : '';
             const tr = document.createElement('tr');
-            tr.className = 'league-row'; // Dodana klasa dla efektu hover
-            tr.title = "Kliknij, aby podejrzeć skład i transfery gracza!";
+            tr.className = 'league-row'; 
+            tr.title = "Kliknij, aby podejrzeć skład i statystyki gracza!";
             
-            // KLIKNIĘCIE W GRACZA -> OTWIERA MODAL
             tr.addEventListener('click', () => openSpyModal(player.name, player.archive));
 
             tr.innerHTML = `
@@ -981,7 +980,7 @@ if(document.getElementById('refresh-league-btn')) {
 const spyModal = document.getElementById('spy-modal');
 const spyCloseBtn = document.getElementById('spy-close-btn');
 
-spyCloseBtn.onclick = () => spyModal.style.display = "none";
+if(spyCloseBtn) spyCloseBtn.onclick = () => spyModal.style.display = "none";
 window.onclick = (e) => { if (e.target == spyModal) spyModal.style.display = "none"; }
 
 document.querySelectorAll('.spy-tab').forEach(btn => {
@@ -997,9 +996,8 @@ let currentSpyArchive = [];
 
 function openSpyModal(managerName, archive) {
     document.getElementById('spy-modal-title').innerText = `Profil Menedżera: ${managerName}`;
-    currentSpyArchive = archive.sort((a, b) => b.gwNumber - a.gwNumber); // Sortuj malejąco (najnowsze na górze)
+    currentSpyArchive = archive.sort((a, b) => b.gwNumber - a.gwNumber); 
     
-    // 1. Zbuduj Dropdown z kolejkami
     const gwSelect = document.getElementById('spy-gw-dropdown');
     gwSelect.innerHTML = '';
     if (currentSpyArchive.length === 0) {
@@ -1007,21 +1005,20 @@ function openSpyModal(managerName, archive) {
         document.getElementById('spy-gw-render-area').innerHTML = '<p>Ten gracz nie zapisał jeszcze żadnej kolejki.</p>';
         document.getElementById('spy-transfers').innerHTML = '<p>Brak historii transferów.</p>';
         document.getElementById('spy-pitch-area').innerHTML = '<p style="text-align:center; color:white; padding-top: 20px;">Brak danych.</p>';
+        document.getElementById('spy-hof-area').innerHTML = '<p>Brak danych do wygenerowania rekordów.</p>';
     } else {
         currentSpyArchive.forEach(gw => {
             const opt = document.createElement('option');
             opt.value = gw.gwNumber; opt.innerText = `Kolejka (GW) ${gw.gwNumber}`;
             gwSelect.appendChild(opt);
         });
-        // Renderuj najnowszą kolejkę domyślnie
-        renderSpySingleGW(currentSpyArchive[0]);
         
-        // Zbuduj resztę
+        renderSpySingleGW(currentSpyArchive[0]);
         renderSpyTransfers(currentSpyArchive);
         renderSpyDreamTeam(currentSpyArchive);
+        renderSpyHallOfFame(currentSpyArchive); // NOWOŚĆ
     }
 
-    // Pokaż modal i zresetuj na pierwszą zakładkę
     document.querySelector('.spy-tab[data-target="spy-gws"]').click();
     spyModal.style.display = "block";
 }
@@ -1041,17 +1038,17 @@ function renderSpySingleGW(gw) {
     if (activeCap && activeCap.injured && gw.userData.userVCap) activeCap = gw.userData.userVCap;
 
     area.innerHTML = `
-        <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; border-left: 5px solid var(--fpl-green);">
-            <div><h3 style="margin:0; color:var(--fpl-purple);">Wynik Kolejki</h3><span style="font-size: 24px; font-weight: bold; color: var(--fpl-green);">${gw.userData.points} pkt</span></div>
-            <div style="text-align:right;"><h3 style="margin:0; color:#555;">Użyty Chip</h3><span style="font-size: 18px; font-weight: bold; color: #333;">${gw.chip.toUpperCase()}</span></div>
+        <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; margin-bottom: 15px; display: flex; justify-content: space-between; border-left: 5px solid var(--fpl-green); border: 1px solid rgba(255,255,255,0.05); border-left: 5px solid var(--fpl-green);">
+            <div><h3 style="margin:0; color:#aaa;">Wynik Kolejki</h3><span style="font-size: 24px; font-weight: bold; color: var(--fpl-green);">${gw.userData.points} pkt</span></div>
+            <div style="text-align:right;"><h3 style="margin:0; color:#aaa;">Użyty Chip</h3><span style="font-size: 18px; font-weight: bold; color: var(--fpl-blue);">${gw.chip.toUpperCase()}</span></div>
         </div>
         <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-            <div style="flex: 1; background: #f0f4f8; padding: 15px; border-radius: 5px;">
-                <h4 style="margin-top:0;">👕 Wyjściowy Skład</h4>
+            <div style="flex: 1; background: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.1);">
+                <h4 style="margin-top:0; color: var(--fpl-green);">👕 Wyjściowy Skład</h4>
                 ${generateLineupHtml(userStarters, false)}
             </div>
-            <div style="flex: 1; background: #f9f9f9; padding: 15px; border-radius: 5px;">
-                <h4 style="margin-top:0;">🪑 Ławka Rezerwowych</h4>
+            <div style="flex: 1; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.05);">
+                <h4 style="margin-top:0; color: #ccc;">🪑 Ławka Rezerwowych</h4>
                 ${generateLineupHtml(userBench, false)}
             </div>
         </div>
@@ -1074,10 +1071,72 @@ function renderSpyTransfers(archive) {
         if (transfersIn.length > 0 || transfersOut.length > 0) {
             let inHtml = transfersIn.map(p => `🟢 Przyszli: ${p.name} (${p.position})`).join('<br>');
             let outHtml = transfersOut.map(p => `🔴 Odeszli: ${p.name} (${p.position})`).join('<br>');
-            area.innerHTML += `<div style="background:white; padding:15px; border-radius:5px; margin-bottom:10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid var(--fpl-blue);"><h4 style="margin:0 0 10px 0;">Przed GW ${currGW.gwNumber}</h4><p style="color:#28a745; margin:0; font-weight:bold;">${inHtml}</p><p style="color:#dc3545; margin:5px 0 0 0; font-weight:bold;">${outHtml}</p></div>`;
+            area.innerHTML += `<div style="background: white; padding:15px; border-radius:5px; margin-bottom:10px; border: 1px solid rgba(255,255,255,0.1); border-left: 4px solid var(--fpl-blue);"><h4 style="margin:0 0 10px 0; color: var(--fpl-purple);">Przed GW ${currGW.gwNumber}</h4><p style="color:var(--fpl-green); margin:0; font-weight:bold;">${inHtml}</p><p style="color:#ff4b4b; margin:5px 0 0 0; font-weight:bold;">${outHtml}</p></div>`;
         }
     }
     if (area.innerHTML === '') area.innerHTML = '<p>Brak zrobionych transferów.</p>';
+}
+
+// NOWOŚĆ: HOF u Skauta
+function renderSpyHallOfFame(archive) {
+    const container = document.getElementById('spy-hof-area');
+    if (archive.length === 0) { container.innerHTML = '<p>Brak danych.</p>'; return; }
+
+    let maxGWScore = { gw: 0, pts: 0 };
+    let bestBasePerf = { name: '-', pts: 0, gw: 0 }; 
+    let bestCapPerf = { name: '-', pts: 0, gw: 0 };  
+    let maxBenchPain = { gw: 0, pts: 0 };
+
+    archive.forEach(gw => {
+        if (gw.userData.points > maxGWScore.pts) maxGWScore = { gw: gw.gwNumber, pts: gw.userData.points };
+
+        let capMult = (gw.chip === 'tc') ? 3 : 2;
+        let activeCap = gw.userData.userCap;
+        if (activeCap && activeCap.injured && gw.userData.userVCap) activeCap = gw.userData.userVCap;
+
+        gw.squad.forEach(p => {
+            if (!p.injured) {
+                let basePts = p.basePts !== undefined ? p.basePts : p.points;
+                if (basePts > bestBasePerf.pts) bestBasePerf = { name: p.name, pts: basePts, gw: gw.gwNumber };
+                
+                let isEffCap = activeCap && activeCap.name === p.name;
+                if (isEffCap) {
+                    let capPts = basePts * capMult;
+                    if (capPts > bestCapPerf.pts) bestCapPerf = { name: p.name, pts: capPts, gw: gw.gwNumber };
+                }
+            }
+        });
+
+        let userCapBase = activeCap ? (activeCap.basePts !== undefined ? activeCap.basePts : (activeCap.points / capMult)) : 0;
+        let bestCapBase = gw.optimalData.bestCap ? (gw.optimalData.bestCap.basePts !== undefined ? gw.optimalData.bestCap.basePts : gw.optimalData.bestCap.points) : 0;
+        let trueCapDiff = (bestCapBase - userCapBase) * (capMult - 1);
+        let gwLost = gw.optimalData.points - gw.userData.points;
+        let benchLost = gwLost - (trueCapDiff > 0 ? trueCapDiff : 0);
+        if (benchLost > maxBenchPain.pts) maxBenchPain = { gw: gw.gwNumber, pts: benchLost };
+    });
+
+    container.innerHTML = `
+        <div class="hof-card">
+            <h4>Najwyższy wynik GW</h4>
+            <div class="hof-value">${maxGWScore.pts} pkt</div>
+            <div class="hof-desc">GW ${maxGWScore.gw}</div>
+        </div>
+        <div class="hof-card">
+            <h4>Występ sezonu</h4>
+            <div class="hof-value">${bestBasePerf.name}</div>
+            <div class="hof-desc">${bestBasePerf.pts} pkt (GW ${bestBasePerf.gw})</div>
+        </div>
+        <div class="hof-card">
+            <h4>Kapitan sezonu</h4>
+            <div class="hof-value">${bestCapPerf.name}</div>
+            <div class="hof-desc">${bestCapPerf.pts} pkt (GW ${bestCapPerf.gw})</div>
+        </div>
+        <div class="hof-card bad-record">
+            <h4>Największy Ból na Ławce</h4>
+            <div class="hof-value">-${maxBenchPain.pts} pkt</div>
+            <div class="hof-desc">GW ${maxBenchPain.gw}</div>
+        </div>
+    `;
 }
 
 function renderSpyDreamTeam(archive) {

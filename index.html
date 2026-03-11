@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FPL Manager 2025/2026</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div id="auth-screen" class="auth-wrapper">
+        <div class="auth-box">
+            <h2>FPL Optimizer ⚽</h2>
+            <p>Zaloguj się do swojej prywatnej ligi</p>
+            
+            <div class="auth-form" style="margin-top: 20px;">
+                <input type="text" id="auth-username" class="auth-input" placeholder="Twój Login (Nazwa Menedżera)" required>
+                <input type="password" id="auth-password" class="auth-input" placeholder="Hasło" required>
+                <button id="auth-action-btn" class="btn-auth">Wejdź do gry</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" style="display: none;">
+        <nav class="navbar">
+            <div class="nav-brand">FPL Optimizer 25/26 ⚽</div>
+            <div class="nav-links">
+                <button class="nav-btn active" data-target="section-welcome">🏠 Start</button>
+                <button class="nav-btn" data-target="section-input">Kalkulator</button>
+                <button class="nav-btn" data-target="section-history">Zapisane Kolejki</button>
+                <button class="nav-btn" data-target="section-transfers">Transfery</button>
+                <button class="nav-btn" data-target="section-best-team">Dream Team 🏆</button>
+                <button class="nav-btn" data-target="section-league">Miniliga ⚔️</button>
+
+                <div class="dropdown">
+                    <button class="dropbtn">Podsumowanie ▾</button>
+                    <div class="dropdown-content">
+                        <button class="nav-btn dropdown-item" data-target="section-chart">📊 Wykres Formy</button>
+                        <button class="nav-btn dropdown-item" data-target="section-table">📋 Tabela Zawodników</button>
+                        <button class="nav-btn dropdown-item" data-target="section-assistant">🤖 Asystent FPL</button>
+                    </div>
+                </div>
+
+                <button class="nav-btn" data-target="section-settings">Ustawienia ⚙️</button>
+                <button class="nav-btn" id="logout-btn" style="color: var(--fpl-burgundy);"> Wyloguj🚪</button>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div id="section-welcome" class="app-section active-section">
+                <div class="welcome-hero">
+                    <h1>🏆 FPL Manager 25/26</h1>
+                    <p>Twój osobisty asystent, analityk punktów i archiwum w jednym miejscu.</p>
+                    <div id="welcome-stats" class="welcome-stats"></div>
+                    <button class="btn-primary" id="start-app-btn" style="font-size: 18px; padding: 15px 30px; background-color: var(--fpl-blue); color: var(--fpl-purple);">Przejdź do Kalkulatora ➡️</button>
+                </div>
+            </div>
+
+            <div id="section-input" class="app-section">
+                <div class="controls-modern">
+                    <div class="control-group">
+                        <label>Kolejka (GW):</label>
+                        <div class="gw-selector">
+                            <button type="button" id="gw-minus" class="gw-btn">-</button>
+                            <span id="gw-display">1</span>
+                            <button type="button" id="gw-plus" class="gw-btn">+</button>
+                        </div>
+                    </div>
+                    <div class="control-group">
+                        <label>Aktywny Chip:</label>
+                        <div class="chip-selector">
+                            <button type="button" class="chip-btn active" data-chip="none">Brak</button>
+                            <button type="button" class="chip-btn" data-chip="tc">TC</button>
+                            <button type="button" class="chip-btn" data-chip="bb">BB</button>
+                            <button type="button" class="chip-btn" data-chip="wc">WC</button>
+                            <button type="button" class="chip-btn" data-chip="fh">FH</button>
+                        </div>
+                    </div>
+                    <button id="calculate-btn" class="btn-primary">Oblicz i Zapisz GW</button>
+                </div>
+
+                <div class="cheat-sheet">
+                    <div class="cheat-col"><strong>Pozycje Formacji:</strong> GK (Bramkarz) | DEF (Obrońca) | MID (Pomocnik) | FWD (Napastnik)</div>
+                    <div class="cheat-col"><strong>Symbole Składu:</strong> 👕 Skład wyjściowy | ©️ Kapitan |<br> 🥈 Wicekapitan</div>
+                    <div class="cheat-col"><strong>Modyfikatory:</strong> 🚑 Kontuzja |<br> 🔄 Double GW (2 mecze do statystyk)</div>
+                    <div class="cheat-col"><strong>Chipy:</strong> TC (Kapitan x3) | BB (Ławka punktuje) |<br> WC / FH (Nielimitowane transfery)</div>
+                </div>
+
+                <div class="squad-panel">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom: 10px;">
+                        <h3 style="margin:0; color: var(--fpl-purple);">Twoja 15-stka</h3>
+                        <button id="load-last-squad-btn" class="btn-primary" style="background-color: var(--fpl-blue); color: var(--fpl-purple); font-size: 13px; padding: 8px 15px;">🔄 Wczytaj ostatni skład</button>
+                    </div>
+                    <div id="players-list"></div>
+                </div>
+
+                <div id="results" class="results-panel" style="display: none; background: white; color: #333; padding: 20px; border-radius: 8px; margin-top: 20px;">
+                    <h2>Wyniki dla GW <span id="res-gw"></span></h2>
+                    <p class="big-score">Optymalne punkty: <span id="optimal-points">0</span></p>
+                    <ul id="best-lineup-list"></ul>
+                </div>
+            </div>
+
+            <div id="section-history" class="app-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h2>Historia Kolejek</h2>
+                    <button id="sort-gw-btn" class="btn-primary" style="padding: 5px 15px; font-size: 14px;">Sortuj: Rosnąco ⬇️</button>
+                </div>
+                <div id="gw-tabs-container" class="tabs-container"></div>
+                <div id="gw-details-panel" class="gw-details">
+                    <p style="color: #333;">Wybierz kolejkę z paska powyżej, aby zobaczyć szczegóły.</p>
+                </div>
+            </div>
+
+            <div id="section-transfers" class="app-section">
+                <h2>Historia Twoich Transferów</h2>
+                <div id="transfers-container"></div>
+            </div>
+
+            <div id="section-best-team" class="app-section">
+                <h2 style="margin-top: 0;">Hall of Fame 🌟</h2>
+                <div id="hall-of-fame-container" class="hof-panel"></div>
+                <hr style="border: 1px solid rgba(255,255,255,0.2); margin: 30px 0;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <h2 style="margin:0;">Twoja Drużyna Sezonu (Dream Team) 🏆</h2>
+                    <button id="download-pitch-btn" class="btn-primary" style="background-color: #28a745; font-size: 14px; padding: 8px 15px;">📸 Pobierz Zdjęcie</button>
+                </div>
+                <p>Najlepsza 11-stka złożona z piłkarzy o <strong>najwyższej średniej punktów</strong>. <em>*Min. 3 występy.</em></p>
+                <div id="pitch-container" class="football-pitch"></div>
+            </div>
+
+            <div id="section-chart" class="app-section">
+                <h2 style="margin-top: 0;">Globalne Statystyki</h2>
+                <div id="global-pain-panel" class="pain-panel"></div>
+                <div style="background: white; color: #333; padding: 15px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); margin-bottom: 30px;">
+                    <h3 style="margin-top: 0; color: var(--fpl-purple);">Wykres Formy</h3>
+                    <div style="position: relative; height: 350px; width: 100%;">
+                        <canvas id="form-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div id="section-table" class="app-section">
+                <h2>Statystyki Zawodników</h2>
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th data-sort="position" class="sortable">Poz. ↕️</th>
+                            <th data-sort="name" class="sortable">Piłkarz ↕️</th>
+                            <th data-sort="appearances" class="sortable">Rozegrane Mecze ↕️</th>
+                            <th data-sort="totalPoints" class="sortable">Suma Punktów ↕️</th>
+                            <th data-sort="average" class="sortable">Średnia na mecz ⬇️</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summary-table-body"></tbody>
+                </table>
+            </div>
+
+            <div id="section-assistant" class="app-section">
+                <h2>Raport Asystenta 🤖</h2>
+                <p>System analizuje historię z ostatnich kolejek (do 3 wstecz) i przygotowuje spersonalizowane rekomendacje.</p>
+                <div id="assistant-alerts-container"></div>
+            </div>
+        <div id="section-league" class="app-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0; color: white;">⚔️ Prywatna Liga</h2>
+                    <button id="refresh-league-btn" class="btn-primary" style="background-color: var(--fpl-blue); color: var(--fpl-purple); font-size: 14px; padding: 8px 15px;">🔄 Odśwież Tabelę</button>
+                </div>
+                <p>Tabela na żywo. <strong style="color: var(--fpl-green);">Kliknij w dowolnego menedżera</strong>, aby zobaczyć jego skład i statystyki!</p>
+                
+                <table class="summary-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px; text-align: center;">Miejsce</th>
+                            <th>Menedżer</th>
+                            <th>Rozegrane Kolejki</th>
+                            <th>Zdobyte Punkty 🔥</th>
+                            <th>Optymalne Punkty</th>
+                        </tr>
+                    </thead>
+                    <tbody id="league-table-body">
+                        <tr><td colspan="5" style="text-align: center;">Ładowanie danych z chmury...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="section-settings" class="app-section">
+            <h2>Zarządzanie Danymi</h2>
+            <div style="background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">
+                <p style="margin-top: 0;">Twoje dane są teraz bezpiecznie synchronizowane z chmurą Google Firebase.</p>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 20px;">
+                    <button id="export-btn" class="btn-primary" style="background-color: var(--fpl-blue); color: var(--fpl-purple);">💾 Pobierz Kopię (JSON)</button>
+                    
+                    <input type="file" id="import-file" accept=".json" style="display: none;">
+                    <button id="import-btn" class="btn-primary" style="background-color: #28a745;">📂 Wczytaj Sezon (JSON)</button>
+                    
+                    <button id="clear-btn" class="btn-danger" style="margin-left: auto;">🗑️ Wyczyść cały swój sezon</button>
+                </div>
+            </div>
+        </div>
+        </div>
+    </div>
+
+<div id="spy-modal" class="spy-modal">
+        <div class="spy-modal-content">
+            <span class="spy-close" id="spy-close-btn">&times;</span>
+            <h2 id="spy-modal-title" style="color: var(--fpl-purple); margin-top: 0;">Profil: </h2>
+            
+            <div class="spy-tabs">
+                <button class="spy-tab active" data-target="spy-gws">Kolejki (What-if)</button>
+                <button class="spy-tab" data-target="spy-transfers">Transfery</button>
+                <button class="spy-tab" data-target="spy-dreamteam">Dream Team</button>
+            </div>
+
+            <div id="spy-gws" class="spy-section active-spy">
+                <div class="spy-gw-select-container">
+                    <label style="font-weight: bold; color: var(--fpl-purple);">Wybierz kolejkę:</label>
+                    <select id="spy-gw-dropdown"></select>
+                </div>
+                <div id="spy-gw-render-area"></div>
+            </div>
+
+            <div id="spy-transfers" class="spy-section"></div>
+
+            <div id="spy-dreamteam" class="spy-section">
+                <div id="spy-pitch-area" class="football-pitch" style="min-height: 450px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

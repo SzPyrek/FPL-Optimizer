@@ -17,6 +17,7 @@ const auth = firebase.auth();
 const db = firebase.firestore();
 
 let globalArchive = [];
+let globalHistorical = []; // NOWOŚĆ: Przechowuje stare sezony
 let globalUsername = "Menedżer";
 let globalSeasonFinished = false; 
 let currentGW = 1; 
@@ -25,7 +26,6 @@ const authScreen = document.getElementById('auth-screen');
 const mainApp = document.getElementById('main-app');
 const btnAuth = document.getElementById('auth-action-btn');
 
-// Przycisk Logowania
 btnAuth.addEventListener('click', () => {
     const rawUsername = document.getElementById('auth-username').value;
     const password = document.getElementById('auth-password').value;
@@ -36,12 +36,9 @@ btnAuth.addEventListener('click', () => {
     }
 
     btnAuth.innerText = "Ładowanie...";
-
-    // Trik: Przerabiamy Login na format emaila
     const safeUsername = rawUsername.trim();
     const fakeEmail = safeUsername.toLowerCase().replace(/\s+/g, '_') + "@fpl.local"; 
 
-    // Logowanie
     auth.signInWithEmailAndPassword(fakeEmail, password)
         .catch((error) => { 
             alert("Błędny Login lub Hasło. (Jeśli to Twoje pierwsze logowanie, upewnij się u Prezesa Ligi, czy założył Ci konto)."); 
@@ -49,17 +46,16 @@ btnAuth.addEventListener('click', () => {
         });
 });
 
-// Wylogowywanie
 document.getElementById('logout-btn').addEventListener('click', () => {
     auth.signOut().then(() => {
         mainApp.style.display = 'none';
         authScreen.style.display = 'flex';
         document.getElementById('auth-password').value = '';
         globalArchive = []; 
+        globalHistorical = [];
     });
 });
 
-// Nasłuchiwanie stanu zalogowania
 auth.onAuthStateChanged((user) => {
     if (user) {
         btnAuth.innerText = "Pobieranie danych...";
@@ -68,15 +64,18 @@ auth.onAuthStateChanged((user) => {
         db.collection("users").doc(user.uid).get().then((doc) => {
             if (doc.exists) {
                 globalArchive = doc.data().archive || [];
+                globalHistorical = doc.data().historical || []; // Pobiera stare sezony
                 globalUsername = doc.data().username || "Menedżer";
                 globalSeasonFinished = doc.data().seasonFinished || false;
             } else {
                 globalArchive = [];
+                globalHistorical = [];
                 globalUsername = inputName || user.email.split('@')[0];
                 globalSeasonFinished = false;
                 db.collection("users").doc(user.uid).set({
                     username: globalUsername,
                     archive: [],
+                    historical: [],
                     seasonFinished: false
                 });
             }
@@ -86,6 +85,7 @@ auth.onAuthStateChanged((user) => {
             
             updatePlayerDatalist();
             renderWelcomeStats();
+            updateDynamicTitles();
             
             if (globalArchive.length > 0) {
                 globalArchive.sort((a, b) => b.gwNumber - a.gwNumber);
@@ -105,6 +105,21 @@ auth.onAuthStateChanged((user) => {
     }
 });
 
+// ==========================================
+// FUNKCJA: DYNAMICZNE ZARZĄDZANIE LATACH
+// ==========================================
+function updateDynamicTitles() {
+    // Startujemy od roku 2025. Dodajemy tyle lat, ile mamy zarchiwizowanych sezonów.
+    const baseYear = 25 + globalHistorical.length; 
+    const nextYear = baseYear + 1;
+    const titleText = `${baseYear}/${nextYear}`;
+    
+    const navBrand = document.getElementById('nav-brand-title');
+    if (navBrand) navBrand.innerHTML = `FPL Optimizer ${titleText} ⚽`;
+    
+    const heroTitle = document.getElementById('welcome-hero-title');
+    if (heroTitle) heroTitle.innerHTML = `🏆 FPL Manager ${titleText}`;
+}
 
 // ==========================================
 // 1. INICJALIZACJA I NAWIGACJA
@@ -180,6 +195,8 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
         if(targetId === 'section-assistant') renderAssistantAlerts(); 
         if(targetId === 'section-welcome') renderWelcomeStats();
         if(targetId === 'section-league') renderLeagueTable();
+        // PODPIĘCIE NOWEJ ZAKŁADKI ARCHIWUM
+        if(targetId === 'section-historical') renderHistoricalSeasons();
     });
 });
 
@@ -274,6 +291,7 @@ function saveGameweek(gwNumber, squad, optimalData, userData, chip) {
     db.collection("users").doc(user.uid).set({
         username: globalUsername, 
         archive: globalArchive,
+        historical: globalHistorical,
         seasonFinished: globalSeasonFinished 
     }).then(() => {
         updatePlayerDatalist(); 
@@ -663,6 +681,7 @@ function renderDreamTeam() {
     }
 
     const btn = document.getElementById('finish-season-btn');
+    const archiveBtn = document.getElementById('archive-season-btn');
     const title = document.getElementById('dream-team-title');
     const desc = document.getElementById('dream-team-desc');
     
@@ -672,12 +691,14 @@ function renderDreamTeam() {
         title.innerText = "Drużyna Sezonu (TOTS) 🃏";
         title.style.color = "#ffd700";
         desc.innerHTML = "Twoja ostateczna jedenastka wygenerowana jako ekskluzywne karty <strong>Ultimate Team</strong>!";
+        if(archiveBtn) archiveBtn.style.display = 'inline-block'; // Pokaż przycisk archiwum
     } else {
         btn.innerText = "🎉 Zakończ Sezon";
         btn.style.backgroundColor = "#ffd700"; btn.style.color = "#100012";
         title.innerText = "Twoja Drużyna Sezonu (Dream Team) 🏆";
         title.style.color = "white";
         desc.innerHTML = "Najlepsza 11-stka złożona z piłkarzy o najwyższej średniej punktów. <em>*Min. 3 występy.</em>";
+        if(archiveBtn) archiveBtn.style.display = 'none'; // Ukryj przycisk archiwum
     }
 
     const createRow = (players) => {
@@ -772,7 +793,7 @@ document.getElementById('download-pitch-btn').addEventListener('click', function
     const pitch = document.getElementById('pitch-container');
     if (pitch.innerHTML.includes('Brak danych') || pitch.innerHTML.includes('Jeszcze nikt')) { alert("Nie ma jeszcze drużyny do pobrania!"); return; }
     html2canvas(pitch, { backgroundColor: null }).then(canvas => {
-        const link = document.createElement('a'); link.download = 'fpl_dream_team_25_26.png';
+        const link = document.createElement('a'); link.download = 'fpl_dream_team.png';
         link.href = canvas.toDataURL('image/png'); link.click();
     });
 });
@@ -802,22 +823,28 @@ document.getElementById('load-last-squad-btn').addEventListener('click', functio
 });
 
 // ==========================================
-// 5. EKSPORT, IMPORT (KOPIA ZAPASOWA)
+// 5. EKSPORT, IMPORT (KOPIA ZAPASOWA I ODZYSKIWANIE)
 // ==========================================
 document.getElementById('export-btn').addEventListener('click', function() {
     const data = JSON.stringify(globalArchive);
     if (!data || data === '[]') { alert("Brak danych do wyeksportowania!"); return; }
+    
+    // Dynamiczna nazwa pliku na podstawie obecnego roku!
+    const baseYear = 25 + globalHistorical.length;
+    const fileName = `fpl_backup_${baseYear}_${baseYear+1}.json`;
+
     const blob = new Blob([data], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `fpl_backup_25_26.json`;
+    const a = document.createElement('a'); a.href = url; a.download = fileName;
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 });
 
-// Zaktualizowany import do Firebase (aby nie tracił nazwy)
 document.getElementById('import-btn').addEventListener('click', function() { document.getElementById('import-file').click(); });
+
 document.getElementById('import-file').addEventListener('change', function(event) {
     const file = event.target.files[0];
     if (!file) return;
+    
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
@@ -826,19 +853,43 @@ document.getElementById('import-file').addEventListener('change', function(event
                 const user = auth.currentUser;
                 if(!user) return;
                 
-                globalArchive = importedData;
-                db.collection("users").doc(user.uid).set({
-                    username: globalUsername, // Pilnujemy, żeby nie nadpisało loginu
-                    archive: globalArchive,
-                    seasonFinished: globalSeasonFinished
-                }).then(() => {
-                    alert("Pomyślnie wczytano sezon z pliku do Chmury!");
-                    renderSummaryTable(); renderTransfers(); updatePlayerDatalist(); renderWelcomeStats();
-                });
-            } else { alert("Błąd: Plik nie zawiera poprawnego formatu."); }
-        } catch (err) { alert("Błąd: Nie udało się odczytać pliku JSON."); }
+                // INTELIGENTNY IMPORT: Pytamy użytkownika, co chce zrobić z plikiem
+                const choice = prompt("Gdzie chcesz wczytać ten plik?\n\nWpisz '1' - aby NADPISAĆ swój aktualny sezon w Kalkulatorze.\nWpisz '2' - aby dodać ten plik jako stary sezon do ARCHIWUM.", "1");
+                
+                if (choice === '1') {
+                    // OPCJA 1: Wczytanie do aktywnego kalkulatora
+                    if(confirm("UWAGA! To usunie Twoje obecne, niezapisane kolejki w kalkulatorze i zastąpi je plikiem. Kontynuować?")) {
+                        globalArchive = importedData;
+                        db.collection("users").doc(user.uid).update({ archive: globalArchive }).then(() => {
+                            alert("Pomyślnie wczytano dane do Kalkulatora!");
+                            renderSummaryTable(); renderTransfers(); updatePlayerDatalist(); renderWelcomeStats();
+                        });
+                    }
+                } else if (choice === '2') {
+                    // OPCJA 2: Odzyskiwanie / Dodawanie do Archiwum
+                    const seasonName = prompt("Podaj nazwę dla odzyskiwanego sezonu (np. 2025/2026):", "Odzyskany Sezon");
+                    if (seasonName) {
+                        globalHistorical.push({ seasonName: seasonName, archive: importedData });
+                        db.collection("users").doc(user.uid).update({ historical: globalHistorical }).then(() => {
+                            renderHistoricalSeasons();
+                            updateDynamicTitles(); // Odświeża licznik lat na górze
+                            alert(`Pomyślnie dodano "${seasonName}" do Archiwum!`);
+                        });
+                    }
+                } else {
+                    alert("Anulowano wczytywanie pliku.");
+                }
+            } else { 
+                alert("Błąd: Plik nie zawiera poprawnego formatu."); 
+            }
+        } catch (err) { 
+            alert("Błąd: Nie udało się odczytać pliku JSON."); 
+        }
     };
     reader.readAsText(file);
+    
+    // Ważne: czyścimy input, żeby można było np. wczytać dwa razy ten sam plik
+    event.target.value = ''; 
 });
 
 // ==========================================
@@ -931,20 +982,19 @@ document.getElementById('calculate-btn').addEventListener('click', function() {
     saveGameweek(currentGW, currentSquad, optimalData, userData, currentChip);
 });
 
-// Zaktualizowane czyszczenie
 document.getElementById('clear-btn').addEventListener('click', function() {
-    if(confirm("Czy na pewno chcesz usunąć historię całego sezonu? Zostanie ona usunięta również z chmury!")) {
+    if(confirm("Czy na pewno chcesz usunąć historię całego sezonu? (Nie usunie to starych lat w Archiwum)")) {
         const user = auth.currentUser;
         if(user) {
             globalArchive = [];
-            globalSeasonFinished = false; // Zerujemy też sezon!
-            db.collection("users").doc(user.uid).set({ username: globalUsername, archive: [], seasonFinished: false }).then(() => {
+            globalSeasonFinished = false; 
+            db.collection("users").doc(user.uid).set({ username: globalUsername, archive: [], historical: globalHistorical, seasonFinished: false }).then(() => {
                 renderSummaryTable(); renderTransfers(); updatePlayerDatalist(); renderWelcomeStats();
                 document.getElementById('pitch-container').innerHTML = '';
                 document.getElementById('global-pain-panel').innerHTML = '';
                 document.getElementById('hall-of-fame-container').innerHTML = '';
                 if(formChartInstance) formChartInstance.destroy();
-                alert("Archiwum w Chmurze wyczyszczone.");
+                alert("Obecny sezon wyczyszczony.");
             });
         }
     }
@@ -960,50 +1010,203 @@ function renderLeagueTable() {
     tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #333;">Pobieranie tabeli... ⏳</td></tr>';
 
     db.collection("users").get().then((querySnapshot) => {
-        let leaderboard = [];
+        let currentLeaderboard = [];
+        let waitingForPlayers = [];
+        let futurePlayers = [];
+        let historicalLeaderboards = {}; // Klucz: indeks sezonu
+        
+        let mySeasonIndex = globalHistorical.length; 
 
         querySnapshot.forEach((doc) => {
             let data = doc.data();
-            let totalUserPts = 0;
-            let totalOptPts = 0;
-            let gwsPlayed = 0;
-            let archiveData = data.archive || [];
-            let hasFinished = data.seasonFinished || false; // Pobieramy status znajomego
+            let displayName = data.username || 'Nieznany Menedżer';
+            let userHist = data.historical || [];
+            let userSeasonIndex = userHist.length;
+            let hasFinished = data.seasonFinished || false;
 
-            if (archiveData.length > 0) {
-                gwsPlayed = archiveData.length;
-                archiveData.forEach(gw => {
-                    totalUserPts += gw.userData.points;
-                    totalOptPts += gw.optimalData.points;
-                });
+            // 1. GŁÓWNA TABELA (Obecny Sezon)
+            if (userSeasonIndex === mySeasonIndex) {
+                let totalUserPts = 0;
+                let totalOptPts = 0;
+                let gwsPlayed = 0;
+                let archiveData = data.archive || [];
+
+                if (archiveData.length > 0) {
+                    gwsPlayed = archiveData.length;
+                    archiveData.forEach(gw => {
+                        totalUserPts += gw.userData.points;
+                        totalOptPts += gw.optimalData.points;
+                    });
+                }
+                currentLeaderboard.push({ name: displayName, gws: gwsPlayed, points: totalUserPts, optPoints: totalOptPts, archive: archiveData, seasonFinished: hasFinished });
+            } 
+            else if (userSeasonIndex < mySeasonIndex) {
+                waitingForPlayers.push(displayName);
+            } else if (userSeasonIndex > mySeasonIndex) {
+                futurePlayers.push(displayName);
             }
 
-            let displayName = data.username || 'Nieznany Menedżer';
-            leaderboard.push({ name: displayName, gws: gwsPlayed, points: totalUserPts, optPoints: totalOptPts, archive: archiveData, seasonFinished: hasFinished });
+            // 2. PRZYGOTOWANIE HISTORII MINILIGI
+            userHist.forEach((pastSeason, idx) => {
+                if(!historicalLeaderboards[idx]) historicalLeaderboards[idx] = [];
+                
+                let histPts = 0;
+                let startingGW = 999;
+                
+                pastSeason.archive.forEach(gw => {
+                    histPts += gw.userData.points;
+                    if (gw.gwNumber < startingGW) startingGW = gw.gwNumber;
+                });
+                
+                if (startingGW === 999) startingGW = 1; // Zabezpieczenie na wypadek braku kolejek
+
+                historicalLeaderboards[idx].push({
+                    name: displayName,
+                    points: histPts,
+                    archive: pastSeason.archive,
+                    startGW: startingGW
+                });
+            });
         });
 
-        leaderboard.sort((a, b) => b.points - a.points);
+        // --- RYSOWANIE OBECNEJ TABELI ---
+        currentLeaderboard.sort((a, b) => b.points - a.points);
         tbody.innerHTML = '';
-        if (leaderboard.length === 0) { tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #333;">Brak graczy.</td></tr>'; return; }
+        if (currentLeaderboard.length === 0) { 
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #333;">Jesteś jedynym graczem w tym sezonie.</td></tr>'; 
+        } else {
+            currentLeaderboard.forEach((player, index) => {
+                let medal = index === 0 ? '🥇 ' : index === 1 ? '🥈 ' : index === 2 ? '🥉 ' : '';
+                const tr = document.createElement('tr');
+                tr.className = 'league-row'; 
+                tr.title = "Kliknij, aby podejrzeć skład i statystyki gracza!";
+                
+                tr.addEventListener('click', () => openSpyModal(player.name, player.archive, player.seasonFinished));
 
-        leaderboard.forEach((player, index) => {
-            let medal = index === 0 ? '🥇 ' : index === 1 ? '🥈 ' : index === 2 ? '🥉 ' : '';
-            const tr = document.createElement('tr');
-            tr.className = 'league-row'; 
-            tr.title = "Kliknij, aby podejrzeć skład i statystyki gracza!";
+                tr.innerHTML = `
+                    <td style="color: #333; font-weight: bold; text-align: center;">${index + 1}</td>
+                    <td style="color: var(--fpl-purple); font-weight: bold; font-size: 16px;">${medal}${player.name}</td>
+                    <td style="color: #333;">${player.gws}</td>
+                    <td style="color: var(--fpl-green); font-weight: bold; font-size: 18px; background: rgba(0,0,0,0.05);">${player.points}</td>
+                    <td style="color: var(--fpl-blue); font-weight: bold;">${player.optPoints}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- RYSOWANIE POWIADOMIEŃ O INNYCH GRACZACH ---
+        const waitingDiv = document.getElementById('waiting-players-alert');
+        if(waitingDiv) {
+            let alertHtml = "";
+            if(waitingForPlayers.length > 0) alertHtml += `<div style="margin-bottom:5px;">⏳ <strong>${waitingForPlayers.join(', ')}</strong> (Jeszcze grają w starym sezonie)</div>`;
+            if(futurePlayers.length > 0) alertHtml += `<div>🚀 <strong>${futurePlayers.join(', ')}</strong> (Są już w nowym sezonie!)</div>`;
             
-            // Przekazujemy status sezonu do okienka
-            tr.addEventListener('click', () => openSpyModal(player.name, player.archive, player.seasonFinished));
+            if (alertHtml !== "") {
+                waitingDiv.innerHTML = alertHtml;
+                waitingDiv.style.display = 'block';
+            } else {
+                waitingDiv.style.display = 'none';
+            }
+        }
 
-            tr.innerHTML = `
-                <td style="color: #333; font-weight: bold; text-align: center;">${index + 1}</td>
-                <td style="color: var(--fpl-purple); font-weight: bold; font-size: 16px;">${medal}${player.name}</td>
-                <td style="color: #333;">${player.gws}</td>
-                <td style="color: var(--fpl-green); font-weight: bold; font-size: 18px; background: rgba(0,0,0,0.05);">${player.points}</td>
-                <td style="color: var(--fpl-blue); font-weight: bold;">${player.optPoints}</td>
-            `;
-            tbody.appendChild(tr);
-        });
+        // --- RYSOWANIE HISTORII MINILIGI (ZWIJANE + WSPÓLNY START) ---
+        const historyContainer = document.getElementById('league-history-container');
+        if(historyContainer) {
+            historyContainer.innerHTML = '';
+            let seasonIndexes = Object.keys(historicalLeaderboards).map(Number).sort((a,b) => b - a); // Najnowsze sezony na górze
+            
+            if(seasonIndexes.length === 0) {
+                historyContainer.innerHTML = '<p style="color: #ccc;">Brak zakończonych sezonów na poziomie Ligi.</p>';
+            } else {
+                seasonIndexes.forEach(idx => {
+                    let players = historicalLeaderboards[idx];
+                    
+                    // 1. Znajdź "Wspólny Start" (kolejkę najpóźniej dołączającego gracza)
+                    let commonStartGW = 1;
+                    players.forEach(p => {
+                        if (p.startGW > commonStartGW) commonStartGW = p.startGW;
+                    });
+
+                    // 2. Oblicz punkty wyrównane (tylko od Wspólnego Startu)
+                    players.forEach(p => {
+                        let commonPts = 0;
+                        p.archive.forEach(gw => {
+                            if (gw.gwNumber >= commonStartGW) {
+                                commonPts += gw.userData.points;
+                            }
+                        });
+                        p.commonPoints = commonPts;
+                    });
+
+                    // 3. Sortujemy ranking. Podstawowy to suma wszystkich punktów.
+                    players.sort((a,b) => b.points - a.points); 
+                    
+                    let yearName = 2025 + idx;
+                    let title = `Sezon ${yearName}/${yearName+1}`;
+
+                    const seasonDiv = document.createElement('div');
+                    seasonDiv.style.cssText = "background: rgba(0,0,0,0.3); border: 1px solid var(--fpl-blue); border-radius: 8px; margin-bottom: 20px; overflow: hidden;";
+
+                    // KLIKALNA BELKA ROZWIJAJĄCA (Akordeon)
+                    const header = document.createElement('div');
+                    header.style.cssText = "background: rgba(0,0,0,0.5); padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.3s;";
+                    header.innerHTML = `
+                        <h2 style="color: var(--fpl-blue); margin: 0; font-size: 20px;">🏆 ${title}</h2>
+                        <span class="toggle-icon" style="font-size: 20px; transition: transform 0.3s; color: white;">▼</span>
+                    `;
+
+                    // ZAWARTOSC (UKRYTA)
+                    const content = document.createElement('div');
+                    content.style.cssText = "display: none; border-top: 1px solid rgba(2, 239, 255, 0.2); background: white;";
+                    
+                    let html = `
+                        <table class="summary-table" style="box-shadow: none; margin-bottom: 0; border-radius: 0;">
+                            <thead>
+                                <tr>
+                                    <th style="width:50px; text-align:center;">Msc</th>
+                                    <th>Menedżer</th>
+                                    <th title="Punkty zebrane przez gracza od momentu jego dołączenia do ligi.">Całkowite Pkt</th>
+                                    <th style="color: var(--fpl-blue);" title="Porównanie fair-play od kolejki, w której w lidze znajdowali się już wszyscy gracze.">Wyrównane Pkt (od GW ${commonStartGW})</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                            
+                    players.forEach((p, i) => {
+                        let medal = i === 0 ? '🥇 ' : i === 1 ? '🥈 ' : i === 2 ? '🥉 ' : '';
+                        let gwText = p.startGW > 1 ? `<br><span style="font-size:11px; font-weight:normal; color: gray;">(zaczął od GW ${p.startGW})</span>` : '';
+                        
+                        html += `<tr>
+                            <td style="text-align: center; color: #333; font-weight: bold;">${i+1}</td>
+                            <td style="color: #333; font-weight: bold;">${medal}${p.name} ${gwText}</td>
+                            <td style="color: var(--fpl-green); font-weight: bold; font-size: 16px;">${p.points}</td>
+                            <td style="color: var(--fpl-blue); font-weight: bold; font-size: 16px; background: rgba(0,255,255,0.05);">${p.commonPoints}</td>
+                        </tr>`;
+                    });
+                    
+                    html += `</tbody></table>`;
+                    content.innerHTML = html;
+
+                    // LOGIKA ROZWIJANIA
+                    header.addEventListener('click', () => {
+                        const icon = header.querySelector('.toggle-icon');
+                        if (content.style.display === 'none') {
+                            content.style.display = 'block';
+                            icon.style.transform = 'rotate(180deg)';
+                            header.style.backgroundColor = 'rgba(2, 239, 255, 0.1)';
+                        } else {
+                            content.style.display = 'none';
+                            icon.style.transform = 'rotate(0deg)';
+                            header.style.backgroundColor = 'rgba(0,0,0,0.5)';
+                        }
+                    });
+
+                    seasonDiv.appendChild(header);
+                    seasonDiv.appendChild(content);
+                    historyContainer.appendChild(seasonDiv);
+                });
+            }
+        }
+
     }).catch((error) => { tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: red;">Błąd: ${error.message}</td></tr>`; });
 }
 
@@ -1011,7 +1214,6 @@ if(document.getElementById('refresh-league-btn')) {
     document.getElementById('refresh-league-btn').addEventListener('click', renderLeagueTable);
 }
 
-// --- LOGIKA MODALA (SKAUTING) ---
 const spyModal = document.getElementById('spy-modal');
 const spyCloseBtn = document.getElementById('spy-close-btn');
 
@@ -1029,7 +1231,6 @@ document.querySelectorAll('.spy-tab').forEach(btn => {
 
 let currentSpyArchive = [];
 
-// Dodajemy parametr isFinished
 function openSpyModal(managerName, archive, isFinished = false) {
     document.getElementById('spy-modal-title').innerText = `Profil Menedżera: ${managerName}`;
     currentSpyArchive = archive.sort((a, b) => b.gwNumber - a.gwNumber); 
@@ -1051,7 +1252,6 @@ function openSpyModal(managerName, archive, isFinished = false) {
         
         renderSpySingleGW(currentSpyArchive[0]);
         renderSpyTransfers(currentSpyArchive);
-        // Przekazujemy status do Dream Teamu Skauta
         renderSpyDreamTeam(currentSpyArchive, isFinished);
         renderSpyHallOfFame(currentSpyArchive); 
     }
@@ -1175,7 +1375,6 @@ function renderSpyHallOfFame(archive) {
     `;
 }
 
-// Odbieramy parametr isFinished
 function renderSpyDreamTeam(archive, isFinished = false) {
     const pitch = document.getElementById('spy-pitch-area');
     pitch.innerHTML = '';
@@ -1217,7 +1416,6 @@ function renderSpyDreamTeam(archive, isFinished = false) {
     const createRow = (players) => {
         let rowHtml = '<div class="pitch-row">';
         players.forEach(p => { 
-            // Jeżeli znajomy skończył sezon, rysujemy u niego KARTY
             if(isFinished) {
                 rowHtml += `
                 <div class="pitch-player" style="width: auto;">
@@ -1239,11 +1437,10 @@ function renderSpyDreamTeam(archive, isFinished = false) {
 }
 
 // ==========================================
-// 8. LOGIKA ZAKOŃCZENIA SEZONU, KONFETTI I MUZYKI
+// 8. LOGIKA ZAKOŃCZENIA SEZONU I MUZYKA
 // ==========================================
-
-const seasonAnthem = new Audio('app_data_config.txt');
-seasonAnthem.volume = 0.5; // Głośność 50%
+const seasonAnthem = new Audio('app_data_config.txt'); // Twój przebrany MP3!
+seasonAnthem.volume = 0.5;
 
 function shootConfetti() {
     const colors = ['#ffd700', '#02efff', '#e90052', '#00ff87', '#ffffff'];
@@ -1266,31 +1463,257 @@ document.getElementById('finish-season-btn').addEventListener('click', function(
     if(!globalSeasonFinished) {
         if(confirm("Czy na pewno chcesz oficjalnie zakończyć sezon? Wygenerujemy Twoją ostateczną Kartę Historii i odblokujemy karty Ultimate Team!")) {
             globalSeasonFinished = true;
-            
-            // Konfetti i Hymn!
             shootConfetti();
             seasonAnthem.currentTime = 0;
-            seasonAnthem.play().catch(e => console.error("Przeglądarka zablokowała audio:", e));
-            
+            seasonAnthem.play().catch(e => console.log("Przeglądarka:", e));
             updateSeasonStatusInDB(user.uid);
         }
     } else {
         if(confirm("Czy chcesz cofnąć zakończenie sezonu i wrócić do edycji? Karty wrócą do zwykłych koszulek.")) {
             globalSeasonFinished = false;
-            
-            // Zatrzymanie muzyki
             seasonAnthem.pause();
             seasonAnthem.currentTime = 0;
-            
             updateSeasonStatusInDB(user.uid);
         }
     }
 });
 
 function updateSeasonStatusInDB(uid) {
-    db.collection("users").doc(uid).update({
-        seasonFinished: globalSeasonFinished
-    }).then(() => {
-        renderDreamTeam(); 
+    db.collection("users").doc(uid).update({ seasonFinished: globalSeasonFinished }).then(() => { renderDreamTeam(); });
+}
+
+// ==========================================
+// 9. ARCHIWUM HISTORYCZNE (NOWE SEZONY I CZYSZCZENIE)
+// ==========================================
+document.getElementById('archive-season-btn').addEventListener('click', function() {
+    const user = auth.currentUser;
+    if(!user) return;
+
+    // Proponujemy domyślną nazwę na bazie obecnego roku
+    const baseYear = 2025 + globalHistorical.length;
+    const defaultName = `${baseYear}/${baseYear + 1}`;
+    
+    const seasonName = prompt("Podaj nazwę zakończonego sezonu, który chcesz zachować w historii:", defaultName);
+    if(!seasonName) return; 
+
+    if(confirm(`Czy na pewno chcesz przenieść obecne dane na stałe do archiwum pod nazwą "${seasonName}"? Twój obecny kalkulator zostanie wyczyszczony!`)) {
+        const historicalSnapshot = { seasonName: seasonName, archive: [...globalArchive] };
+        globalHistorical.push(historicalSnapshot);
+
+        globalArchive = [];
+        globalSeasonFinished = false;
+
+        db.collection("users").doc(user.uid).update({
+            historical: globalHistorical, archive: [], seasonFinished: false
+        }).then(() => {
+            alert(`Sezon "${seasonName}" zarchiwizowany! Kalkulator jest gotowy na nową kampanię.`);
+            window.location.reload(); 
+        });
+    }
+});
+
+// LOGIKA CZYSZCZENIA CAŁEGO ARCHIWUM (W USTAWIENIACH)
+document.getElementById('clear-history-btn').addEventListener('click', function() {
+    if(confirm("UWAGA! 🔥 Czy na pewno chcesz trwale usunąć WSZYSTKIE historyczne sezony z Archiwum? Tej operacji nie da się cofnąć!")) {
+        const user = auth.currentUser;
+        if(user) {
+            globalHistorical = [];
+            db.collection("users").doc(user.uid).update({
+                historical: []
+            }).then(() => {
+                renderHistoricalSeasons();
+                updateDynamicTitles(); // Wraca do 25/26
+                alert("Archiwum zostało trwale spalone i wyczyszczone.");
+            });
+        }
+    }
+});
+
+// ZWIJANE ZAKŁADKI ARCHIWUM Z OPCJĄ USUWANIA POJEDYNCZEGO SEZONU NA DOLE
+function renderHistoricalSeasons() {
+    const container = document.getElementById('historical-container');
+    container.innerHTML = '';
+    
+    if(globalHistorical.length === 0) {
+        container.innerHTML = '<p>Brak zarchiwizowanych sezonów. Zakończ obecny sezon, by się tu pojawił.</p>';
+        return;
+    }
+
+    // Odwracamy tablicę, żeby najnowszy sezon był na górze
+    const reversed = [...globalHistorical].reverse(); 
+
+    reversed.forEach((pastSeason, index) => {
+        let totalPts = 0, optPts = 0;
+        pastSeason.archive.forEach(gw => {
+            totalPts += gw.userData.points; optPts += gw.optimalData.points;
+        });
+
+        const seasonDiv = document.createElement('div');
+        seasonDiv.style.cssText = "background: rgba(0,0,0,0.3); border: 1px solid var(--fpl-blue); border-radius: 8px; margin-bottom: 20px; overflow: hidden;";
+
+        // KLIKALNY NAGŁÓWEK (BELKA) BEZ PRZYCISKU USUWANIA
+        const header = document.createElement('div');
+        header.style.cssText = "background: rgba(0,0,0,0.5); padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: 0.3s;";
+        
+        header.innerHTML = `
+            <h2 style="color: var(--fpl-blue); margin: 0; font-size: 20px;">Sezon ${pastSeason.seasonName}</h2>
+            <span class="toggle-icon" style="font-size: 20px; transition: transform 0.3s; color: white;">▼</span>
+        `;
+        
+        // ZAWARTOSC (UKRYTA DOMYSLNIE) Z PRZYCISKIEM NA SAMYM DOLE
+        const content = document.createElement('div');
+        content.style.cssText = "padding: 20px; display: none; border-top: 1px solid rgba(2, 239, 255, 0.2);";
+        content.innerHTML = `
+            <div style="display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap;">
+                <div style="flex:1; min-width: 150px; background: white; padding: 15px; border-radius: 8px; color: #333; text-align: center;">
+                    <h4 style="margin:0 0 5px 0; color:var(--fpl-purple);">Rozegrane Kolejki</h4><div style="font-size:24px; font-weight:bold;">${pastSeason.archive.length}</div>
+                </div>
+                <div style="flex:1; min-width: 150px; background: white; padding: 15px; border-radius: 8px; color: #333; text-align: center;">
+                    <h4 style="margin:0 0 5px 0; color:var(--fpl-purple);">Zdobyte Punkty</h4><div style="font-size:24px; font-weight:bold; color:var(--fpl-green);">${totalPts}</div>
+                </div>
+                <div style="flex:1; min-width: 150px; background: white; padding: 15px; border-radius: 8px; color: #333; text-align: center;">
+                    <h4 style="margin:0 0 5px 0; color:var(--fpl-purple);">Optymalne Punkty</h4><div style="font-size:24px; font-weight:bold; color:var(--fpl-blue);">${optPts}</div>
+                </div>
+            </div>
+            <h3 style="color: white; margin-top: 30px;">Legendy Hall of Fame 🌟</h3>
+            <div id="hist-hof-${index}" class="hof-panel"></div>
+            <h3 style="color: #ffd700; margin-top: 30px;">Ostateczna Drużyna Sezonu 🃏</h3>
+            <div id="hist-pitch-${index}" class="football-pitch" style="min-height: 450px;"></div>
+            
+            <div style="margin-top: 20px; text-align: right; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+                <button class="delete-single-btn" style="background-color: #e90052; color: white; border: 1px solid #900032; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s;">🗑️ Usuń ten sezon z Archiwum</button>
+            </div>
+        `;
+
+        // LOGIKA ROZWIJANIA PUSTEGO PANELU
+        header.addEventListener('click', () => {
+            const icon = header.querySelector('.toggle-icon');
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                icon.style.transform = 'rotate(180deg)'; // Odwraca strzałkę
+                header.style.backgroundColor = 'rgba(2, 239, 255, 0.1)';
+            } else {
+                content.style.display = 'none';
+                icon.style.transform = 'rotate(0deg)';
+                header.style.backgroundColor = 'rgba(0,0,0,0.5)';
+            }
+        });
+
+        // LOGIKA USUWANIA KONKRETNEGO SEZONU
+        const delBtn = content.querySelector('.delete-single-btn');
+        delBtn.addEventListener('click', () => {
+            if(confirm(`Czy na pewno chcesz usunąć sezon "${pastSeason.seasonName}" z Archiwum?`)) {
+                const user = auth.currentUser;
+                if(!user) return;
+
+                // Obliczamy prawdziwy indeks w bazie danych:
+                const realIndex = globalHistorical.length - 1 - index;
+                
+                // Usuwamy ten konkretny sezon
+                globalHistorical.splice(realIndex, 1);
+                
+                // Aktualizujemy bazę
+                db.collection("users").doc(user.uid).update({
+                    historical: globalHistorical
+                }).then(() => {
+                    renderHistoricalSeasons(); // Odśwież widok
+                    updateDynamicTitles(); // Zaktualizuj licznik lat na górze
+                });
+            }
+        });
+
+        seasonDiv.appendChild(header);
+        seasonDiv.appendChild(content);
+        container.appendChild(seasonDiv);
+
+        renderHistoricalHOF(pastSeason.archive, `hist-hof-${index}`);
+        renderHistoricalTOTS(pastSeason.archive, `hist-pitch-${index}`);
     });
+}
+
+function renderHistoricalHOF(archive, containerId) {
+    const container = document.getElementById(containerId);
+    if (archive.length === 0) { container.innerHTML = '<p>Brak danych.</p>'; return; }
+
+    let maxGWScore = { gw: 0, pts: 0 }, bestBasePerf = { name: '-', pts: 0, gw: 0 }, bestCapPerf = { name: '-', pts: 0, gw: 0 }, maxBenchPain = { gw: 0, pts: 0 };
+
+    archive.forEach(gw => {
+        if (gw.userData.points > maxGWScore.pts) maxGWScore = { gw: gw.gwNumber, pts: gw.userData.points };
+        let capMult = (gw.chip === 'tc') ? 3 : 2;
+        let activeCap = gw.userData.userCap;
+        if (activeCap && activeCap.injured && gw.userData.userVCap) activeCap = gw.userData.userVCap;
+
+        gw.squad.forEach(p => {
+            if (!p.injured) {
+                let basePts = p.basePts !== undefined ? p.basePts : p.points;
+                if (basePts > bestBasePerf.pts) bestBasePerf = { name: p.name, pts: basePts, gw: gw.gwNumber };
+                let isEffCap = activeCap && activeCap.name === p.name;
+                if (isEffCap) {
+                    let capPts = basePts * capMult;
+                    if (capPts > bestCapPerf.pts) bestCapPerf = { name: p.name, pts: capPts, gw: gw.gwNumber };
+                }
+            }
+        });
+        let userCapBase = activeCap ? (activeCap.basePts !== undefined ? activeCap.basePts : (activeCap.points / capMult)) : 0;
+        let bestCapBase = gw.optimalData.bestCap ? (gw.optimalData.bestCap.basePts !== undefined ? gw.optimalData.bestCap.basePts : gw.optimalData.bestCap.points) : 0;
+        let trueCapDiff = (bestCapBase - userCapBase) * (capMult - 1);
+        let gwLost = gw.optimalData.points - gw.userData.points;
+        let benchLost = gwLost - (trueCapDiff > 0 ? trueCapDiff : 0);
+        if (benchLost > maxBenchPain.pts) maxBenchPain = { gw: gw.gwNumber, pts: benchLost };
+    });
+
+    container.innerHTML = `
+        <div class="hof-card"><h4>Najwyższy wynik GW</h4><div class="hof-value">${maxGWScore.pts} pkt</div><div class="hof-desc">GW ${maxGWScore.gw}</div></div>
+        <div class="hof-card"><h4>Występ sezonu</h4><div class="hof-value">${bestBasePerf.name}</div><div class="hof-desc">${bestBasePerf.pts} pkt (GW ${bestBasePerf.gw})</div></div>
+        <div class="hof-card"><h4>Kapitan sezonu</h4><div class="hof-value">${bestCapPerf.name}</div><div class="hof-desc">${bestCapPerf.pts} pkt (GW ${bestCapPerf.gw})</div></div>
+        <div class="hof-card bad-record"><h4>Ból na Ławce</h4><div class="hof-value">-${maxBenchPain.pts} pkt</div><div class="hof-desc">GW ${maxBenchPain.gw}</div></div>
+    `;
+}
+
+function renderHistoricalTOTS(archive, containerId) {
+    const pitch = document.getElementById(containerId);
+    pitch.innerHTML = '';
+    const playerStats = {};
+    archive.forEach(gw => {
+        gw.squad.forEach(player => {
+            const name = player.name.trim();
+            if (!name) return;
+            if (!playerStats[name]) playerStats[name] = { name: name, position: player.position, totalPoints: 0, appearances: 0 };
+            if (!player.injured) {
+                playerStats[name].totalPoints += (player.basePts !== undefined ? player.basePts : player.points);
+                playerStats[name].appearances += player.isDGW ? 2 : 1; 
+            }
+        });
+    });
+
+    const eligiblePlayers = Object.values(playerStats).filter(p => p.appearances >= 3).map(p => { p.average = parseFloat((p.totalPoints / p.appearances).toFixed(2)); return p; }).sort((a,b) => b.average - a.average);
+    if (eligiblePlayers.length === 0) { pitch.innerHTML = '<p style="color:white; text-align:center; padding-top: 20px;">Brak wystarczających danych do ułożenia TOTS.</p>'; return; }
+
+    const pool = { GK: [], DEF: [], MID: [], FWD: [] };
+    eligiblePlayers.forEach(p => { if(pool[p.position]) pool[p.position].push(p); });
+    let best11 = { GK: [], DEF: [], MID: [], FWD: [] };
+
+    if (pool.GK.length > 0) best11.GK.push(pool.GK.shift());
+    for(let i=0; i<3; i++) if (pool.DEF.length > 0) best11.DEF.push(pool.DEF.shift());
+    for(let i=0; i<2; i++) if (pool.MID.length > 0) best11.MID.push(pool.MID.shift());
+    for(let i=0; i<1; i++) if (pool.FWD.length > 0) best11.FWD.push(pool.FWD.shift());
+
+    let remainingSlots = 11 - (best11.GK.length + best11.DEF.length + best11.MID.length + best11.FWD.length);
+    let combinedPool = [...pool.DEF, ...pool.MID, ...pool.FWD].sort((a,b) => b.average - a.average);
+
+    for (let p of combinedPool) {
+        if (remainingSlots <= 0) break;
+        if (p.position === 'DEF' && best11.DEF.length < 5) { best11.DEF.push(p); remainingSlots--; }
+        else if (p.position === 'MID' && best11.MID.length < 5) { best11.MID.push(p); remainingSlots--; }
+        else if (p.position === 'FWD' && best11.FWD.length < 3) { best11.FWD.push(p); remainingSlots--; }
+    }
+
+    const createRow = (players) => {
+        let rowHtml = '<div class="pitch-row">';
+        players.forEach(p => { 
+            rowHtml += `<div class="pitch-player" style="width: auto;"><div class="fifa-card"><div class="fifa-rating">${p.average}</div><div class="fifa-pos">${p.position}</div><div class="fifa-img"></div><div class="fifa-name" title="${p.name}">${p.name}</div></div></div>`;
+        });
+        return rowHtml + '</div>';
+    };
+    pitch.innerHTML += createRow(best11.FWD) + createRow(best11.MID) + createRow(best11.DEF) + createRow(best11.GK);
 }

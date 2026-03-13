@@ -29,7 +29,7 @@
 
     <div id="main-app" style="display: none;">
         <nav class="navbar">
-            <div class="nav-brand">FPL Optimizer 25/26 ⚽</div>
+            <div id="nav-brand-title" class="nav-brand">FPL Optimizer 25/26 ⚽</div>
             <div class="nav-links">
                 <button class="nav-btn active" data-target="section-welcome">🏠 Start</button>
                 <button class="nav-btn" data-target="section-input">Kalkulator</button>
@@ -44,6 +44,7 @@
                         <button class="nav-btn dropdown-item" data-target="section-chart">📊 Wykres Formy</button>
                         <button class="nav-btn dropdown-item" data-target="section-table">📋 Tabela Zawodników</button>
                         <button class="nav-btn dropdown-item" data-target="section-assistant">🤖 Asystent FPL</button>
+                        <button class="nav-btn dropdown-item" data-target="section-historical">🏛️ Archiwum Sezonów</button>
                     </div>
                 </div>
 
@@ -55,7 +56,7 @@
         <div class="container">
             <div id="section-welcome" class="app-section active-section">
                 <div class="welcome-hero">
-                    <h1>🏆 FPL Manager 25/26</h1>
+                    <h1 id="welcome-hero-title">🏆 FPL Manager 25/26</h1>
                     <p>Twój osobisty asystent, analityk punktów i archiwum w jednym miejscu.</p>
                     <div id="welcome-stats" class="welcome-stats"></div>
                     <button class="btn-primary" id="start-app-btn" style="font-size: 18px; padding: 15px 30px; background-color: var(--fpl-blue); color: var(--fpl-purple);">Przejdź do Kalkulatora ➡️</button>
@@ -129,9 +130,10 @@
                 <hr style="border: 1px solid rgba(255,255,255,0.2); margin: 30px 0;">
                 
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-                    <h2 id="dream-team-title" style="margin:0;">Twoja Drużyna Sezonu 🏆</h2>
+                    <h2 id="dream-team-title" style="margin:0;">Twoja Drużyna Sezonu (Dream Team) 🏆</h2>
                     <div>
                         <button id="finish-season-btn" class="btn-primary" style="background-color: #ffd700; color: #100012; font-size: 14px; padding: 8px 15px; font-weight: bold; border: 1px solid #cca100;">🎉 Zakończ Sezon</button>
+                        <button id="archive-season-btn" class="btn-primary" style="background-color: #e90052; color: white; display: none; font-size: 14px; padding: 8px 15px; font-weight: bold; border: 1px solid #900032;">🏛️ Przenieś do Archiwum</button>
                         <button id="download-pitch-btn" class="btn-primary" style="background-color: #28a745; font-size: 14px; padding: 8px 15px;">📸 Pobierz Zdjęcie</button>
                     </div>
                 </div>
@@ -176,9 +178,11 @@
                     <h2 style="margin: 0; color: white;">⚔️ Prywatna Liga</h2>
                     <button id="refresh-league-btn" class="btn-primary" style="background-color: var(--fpl-blue); color: var(--fpl-purple); font-size: 14px; padding: 8px 15px;">🔄 Odśwież Tabelę</button>
                 </div>
-                <p>Tabela na żywo. <strong style="color: var(--fpl-green);">Kliknij w dowolnego menedżera</strong>, aby zobaczyć jego skład i statystyki!</p>
+                <p>Tabela na żywo obecnego sezonu. <strong style="color: var(--fpl-green);">Kliknij w dowolnego menedżera</strong>, aby zobaczyć jego skład i statystyki!</p>
                 
-                <table class="summary-table">
+                <div id="waiting-players-alert" style="display: none; background: rgba(0,0,0,0.4); border: 1px solid var(--fpl-burgundy); padding: 15px; border-radius: 5px; margin-bottom: 20px; color: white;"></div>
+
+                <table class="summary-table" style="margin-bottom: 40px;">
                     <thead>
                         <tr>
                             <th style="width: 50px; text-align: center;">Miejsce</th>
@@ -192,6 +196,15 @@
                         <tr><td colspan="5" style="text-align: center;">Ładowanie danych z chmury...</td></tr>
                     </tbody>
                 </table>
+
+                <h2 style="color: white; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 20px; margin-top: 30px;">📜 Historia Miniligi</h2>
+                <p>Ostateczne zestawienie wyników z poprzednich lat. Zobacz, kto na przestrzeni lat okazywał się najlepszym strategiem!</p>
+                <div id="league-history-container"></div>
+            </div>
+            <div id="section-historical" class="app-section">
+                <h2 style="margin-top: 0;">Archiwum Sezonów 🏛️</h2>
+                <p>Tutaj spoczywają legendy. Historia Twoich poprzednich kampanii menedżerskich.</p>
+                <div id="historical-container"></div>
             </div>
             <div id="section-settings" class="app-section">
             <h2>Zarządzanie Danymi</h2>
@@ -204,6 +217,7 @@
                     <button id="import-btn" class="btn-primary" style="background-color: #28a745;">📂 Wczytaj Sezon (JSON)</button>
                     
                     <button id="clear-btn" class="btn-danger" style="margin-left: auto;">🗑️ Wyczyść cały swój sezon</button>
+                    <button id="clear-history-btn" class="btn-danger" style="background-color: #8b0000; margin-left: 10px;">🔥 Usuń Archiwum</button>
                 </div>
             </div>
         </div>

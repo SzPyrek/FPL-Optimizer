@@ -929,6 +929,24 @@ document.querySelectorAll('.chip-btn').forEach(btn => {
 });
 
 document.getElementById('calculate-btn').addEventListener('click', function() {
+    // --- ZABEZPIECZENIE 3: Ostrzeżenie przed przypadkowym nadpisaniem ---
+    const existingGW = globalArchive.find(gw => gw.gwNumber === currentGW);
+    if (existingGW) {
+        if (!confirm(`UWAGA! Kolejka GW ${currentGW} już istnieje w bazie.\nCzy na pewno chcesz ją NADPISAĆ nowymi danymi?`)) {
+            return; // Użytkownik kliknął Anuluj - przerywamy
+        }
+    }
+
+    // --- ZABEZPIECZENIE 4: Limit jednego chipa na sezon ---
+    if (currentChip !== 'none') {
+        // Szukamy, czy ten chip był już użyty w innej kolejce
+        const usedChipGW = globalArchive.find(gw => gw.chip === currentChip && gw.gwNumber !== currentGW);
+        if (usedChipGW) {
+            alert(`Oszustwo! Użyłeś już chipa ${currentChip.toUpperCase()} w GW ${usedChipGW.gwNumber}.\nMasz tylko jeden taki chip na sezon!`);
+            return;
+        }
+    }
+
     let currentSquad = [];
     let userCaptain = null, userVCaptain = null, bestCaptain = { name: "Brak", basePts: -1000 };
     let capMult = (currentChip === 'tc') ? 3 : 2;
@@ -938,8 +956,26 @@ document.getElementById('calculate-btn').addEventListener('click', function() {
         if (row.querySelector('.p-cap').checked && row.querySelector('.p-inj').checked) isMainCapInjured = true;
     });
 
+    let namesSet = new Set();
+    let hasDuplicates = false;
+    let duplicateName = "";
+
     document.querySelectorAll('.player-row').forEach((row) => {
-        const name = row.querySelector('.p-name').value || "Nieznany Gracz";
+        let rawName = row.querySelector('.p-name').value || "";
+        
+        // --- ZABEZPIECZENIE 2: Normalizacja liter i spacji (haaland -> Haaland) ---
+        let name = rawName.trim().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+        if (name === "") name = "Nieznany Gracz";
+        
+        // --- ZABEZPIECZENIE 1: Blokada klonowania zawodników ---
+        if (name !== "Nieznany Gracz") {
+            if (namesSet.has(name)) {
+                hasDuplicates = true;
+                duplicateName = name;
+            }
+            namesSet.add(name);
+        }
+
         const pos = row.querySelector('.p-pos-label').getAttribute('data-pos');
         const pts = parseInt(row.querySelector('.p-pts').value) || 0;
         const isInjured = row.querySelector('.p-inj').checked; 
@@ -961,13 +997,19 @@ document.getElementById('calculate-btn').addEventListener('click', function() {
         if (!isInjured && basePts > bestCaptain.basePts) bestCaptain = { name: name, basePts: basePts };
     });
 
+    // Przerwanie po pętli, jeśli wykryto klona
+    if (hasDuplicates) {
+        alert(`BŁĄD! Zawodnik "${duplicateName}" występuje w Twoim składzie więcej niż raz. Usuń klona!`);
+        return;
+    }
+
     const userStarters = currentSquad.filter(p => p.isStarter);
     if (userStarters.length !== 11 && currentChip !== 'bb') { alert("BŁĄD! Musisz zaznaczyć dokładnie 11 zawodników!"); return; }
     
     let counts = { GK: 0, DEF: 0, MID: 0, FWD: 0 };
     userStarters.forEach(p => counts[p.position]++);
     if (currentChip !== 'bb' && (counts.GK !== 1 || counts.DEF < 3 || counts.MID < 2 || counts.FWD < 1)) {
-        alert("BŁĄD! Twój wyjściowy skład łamie zasady FPL."); return;
+        alert("BŁĄD! Twój wyjściowy skład łamie zasady formacji FPL."); return;
     }
 
     const optimalResult = calculateOptimalPoints(currentSquad, currentChip);

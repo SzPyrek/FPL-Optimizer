@@ -1239,8 +1239,12 @@ function renderSpyDreamTeam(archive, isFinished = false) {
 }
 
 // ==========================================
-// 8. LOGIKA ZAKOŃCZENIA SEZONU I KONFETTI
+// 8. LOGIKA ZAKOŃCZENIA SEZONU, KONFETTI I MUZYKI
 // ==========================================
+
+const seasonAnthem = new Audio('app_data_config.txt');
+seasonAnthem.volume = 0.5; // Głośność 50%
+
 function shootConfetti() {
     const colors = ['#ffd700', '#02efff', '#e90052', '#00ff87', '#ffffff'];
     for(let i=0; i<100; i++) {
@@ -1262,12 +1266,22 @@ document.getElementById('finish-season-btn').addEventListener('click', function(
     if(!globalSeasonFinished) {
         if(confirm("Czy na pewno chcesz oficjalnie zakończyć sezon? Wygenerujemy Twoją ostateczną Kartę Historii i odblokujemy karty Ultimate Team!")) {
             globalSeasonFinished = true;
+            
+            // Konfetti i Hymn!
             shootConfetti();
+            seasonAnthem.currentTime = 0;
+            seasonAnthem.play().catch(e => console.error("Przeglądarka zablokowała audio:", e));
+            
             updateSeasonStatusInDB(user.uid);
         }
     } else {
         if(confirm("Czy chcesz cofnąć zakończenie sezonu i wrócić do edycji? Karty wrócą do zwykłych koszulek.")) {
             globalSeasonFinished = false;
+            
+            // Zatrzymanie muzyki
+            seasonAnthem.pause();
+            seasonAnthem.currentTime = 0;
+            
             updateSeasonStatusInDB(user.uid);
         }
     }

@@ -28,30 +28,33 @@
     </div>
 
     <div id="main-app" style="display: none;">
-        <nav class="navbar">
-            <div id="nav-brand-title" class="nav-brand">FPL Optimizer 25/26 ⚽</div>
-            <div class="nav-links">
-                <button class="nav-btn active" data-target="section-welcome">🏠 Start</button>
-                <button class="nav-btn" data-target="section-input">Kalkulator</button>
-                <button class="nav-btn" data-target="section-history">Zapisane Kolejki</button>
-                <button class="nav-btn" data-target="section-transfers">Transfery</button>
-                <button class="nav-btn" data-target="section-best-team">Dream Team 🏆</button>
-                <button class="nav-btn" data-target="section-league">Miniliga ⚔️</button>
-
-                <div class="dropdown">
-                    <button class="dropbtn">Podsumowanie ▾</button>
-                    <div class="dropdown-content">
-                        <button class="nav-btn dropdown-item" data-target="section-chart">📊 Wykres Formy</button>
-                        <button class="nav-btn dropdown-item" data-target="section-table">📋 Tabela Zawodników</button>
-                        <button class="nav-btn dropdown-item" data-target="section-assistant">🤖 Asystent FPL</button>
-                        <button class="nav-btn dropdown-item" data-target="section-historical">🏛️ Archiwum Sezonów</button>
-                    </div>
+    <nav style="position: relative;">
+        <div id="nav-brand-title" class="nav-brand">FPL Optimizer 25/26 ⚽</div>
+        
+        <button id="mobile-menu-btn" style="display: none; background: none; border: none; color: white; font-size: 28px; position: absolute; right: 20px; top: 10px; cursor: pointer;">☰</button>
+        
+        <div id="nav-buttons-container" class="nav-buttons" style="display: flex; flex-wrap: wrap;">
+            <button class="nav-btn active" data-target="section-welcome">🏠 Start</button>
+            <button class="nav-btn" data-target="section-input">Kalkulator</button>
+            <button class="nav-btn" data-target="section-history">Zapisane Kolejki</button>
+            <button class="nav-btn" data-target="section-transfers">Transfery</button>
+            <button class="nav-btn" data-target="section-best-team">Dream Team 🏆</button>
+            <button class="nav-btn" data-target="section-league">Miniliga ⚔️</button>
+            
+            <div class="dropdown">
+                <button class="nav-btn dropbtn">Podsumowanie ▾</button>
+                <div class="dropdown-content">
+                    <button class="nav-btn dropdown-item" data-target="section-table">Tabela Wyników</button>
+                    <button class="nav-btn dropdown-item" data-target="section-chart">Wykresy i Formy</button>
+                    <button class="nav-btn dropdown-item" data-target="section-assistant">Asystent 🤖</button>
+                    <button class="nav-btn dropdown-item" data-target="section-historical">🏛️ Archiwum Sezonów</button>
                 </div>
-
-                <button class="nav-btn" data-target="section-settings">Ustawienia ⚙️</button>
-                <button class="nav-btn" id="logout-btn" style="color: var(--fpl-burgundy);"> Wyloguj🚪</button>
             </div>
-        </nav>
+            
+            <button class="nav-btn" data-target="section-settings">Ustawienia ⚙️</button>
+            <button class="nav-btn" id="logout-btn" style="color: #ff4b4b; margin-left: auto;">Wyloguj 🚪</button>
+        </div>
+    </nav>
 
         <div class="container">
             <div id="section-welcome" class="app-section active-section">

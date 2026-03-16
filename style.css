@@ -333,3 +333,42 @@ body {
 @keyframes fall {
     to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
 }
+
+/* ==========================================
+   10. RWD - WERSJA MOBILNA I TABLETOWA
+   ========================================== */
+@media (max-width: 768px) {
+    /* Menu nawigacyjne */
+    nav { flex-direction: column; align-items: flex-start; padding: 10px; }
+    #mobile-menu-btn { display: block !important; }
+    #nav-buttons-container { display: none; flex-direction: column; width: 100%; margin-top: 15px; }
+    #nav-buttons-container.show { display: flex; }
+    
+    .nav-btn { width: 100%; text-align: left; margin: 2px 0; padding: 12px; border-radius: 5px; }
+    #logout-btn { margin-left: 0 !important; margin-top: 10px; border-top: 1px solid rgba(255,255,255,0.2); border-radius: 0; }
+    
+    .dropdown-content { position: static; display: none; background: rgba(0,0,0,0.2); width: 100%; box-shadow: none; }
+    .dropdown:hover .dropdown-content, .dropdown.active .dropdown-content { display: flex; flex-direction: column; }
+    
+    /* Kalkulator - Rzędy z zawodnikami */
+    .player-row { flex-wrap: wrap; height: auto; padding: 15px 10px; gap: 10px; justify-content: space-between; align-items: center; }
+    .player-row span { font-size: 14px; }
+    .p-name { width: 100%; margin-bottom: 5px; font-size: 16px; padding: 8px; } /* Nazwisko na cały rząd */
+    .p-pts { width: 60px; font-size: 16px; padding: 8px; }
+    
+    /* Panele statystyk i ustawień */
+    .pain-box, .hof-card { min-width: 100%; flex: 1 1 100%; }
+    #section-settings .btn-danger { width: 100%; margin: 5px 0 !important; }
+    
+    /* Tabele - pozwalają na przewijanie palcem w bok */
+    .summary-table, .league-table-body, table { display: block; overflow-x: auto; white-space: nowrap; width: 100%; }
+    
+    /* Boisko - Dream Team */
+    .football-pitch { padding: 10px 0; min-height: 400px; }
+    .pitch-row { flex-wrap: wrap; gap: 5px; justify-content: center; }
+    .pitch-player { transform: scale(0.85); margin: 0; } /* Pomniejszamy koszulki */
+    
+    /* Modale (Skauting) */
+    .modal-content { width: 95%; margin: 5% auto; padding: 15px; }
+    .spy-tab { padding: 8px; font-size: 12px; }
+}

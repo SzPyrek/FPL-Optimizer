@@ -1759,3 +1759,27 @@ function renderHistoricalTOTS(archive, containerId) {
     };
     pitch.innerHTML += createRow(best11.FWD) + createRow(best11.MID) + createRow(best11.DEF) + createRow(best11.GK);
 }
+
+// ==========================================
+// 10. OBSŁUGA MENU MOBILNEGO (RWD)
+// ==========================================
+const mobileBtn = document.getElementById('mobile-menu-btn');
+const navContainer = document.getElementById('nav-buttons-container');
+
+if (mobileBtn && navContainer) {
+    // Pokazywanie/ukrywanie menu po kliknięciu w hamburgera
+    mobileBtn.addEventListener('click', () => {
+        navContainer.classList.toggle('show');
+        mobileBtn.innerText = navContainer.classList.contains('show') ? '✖' : '☰'; // Zmienia ikonkę na X
+    });
+
+    // Zamykanie menu po wybraniu zakładki (tylko na ekranach mobilnych)
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                navContainer.classList.remove('show');
+                mobileBtn.innerText = '☰';
+            }
+        });
+    });
+}

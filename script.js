@@ -973,7 +973,7 @@ document.getElementById('calculate-btn').addEventListener('click', function() {
         let rawName = row.querySelector('.p-name').value || "";
         
         // --- ZABEZPIECZENIE 2: Normalizacja liter i spacji (haaland -> Haaland) ---
-        let name = rawName.trim().split(/\s+/).map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()).join(' ');
+        let name = rawName.trim().toLowerCase().replace(/(^|[\s.\-'])([a-z])/g, (match, separator, letter) => separator + letter.toUpperCase()); name = name.replace(/\s+/g, ' ');
         if (name === "") name = "Nieznany Gracz";
         
         // --- ZABEZPIECZENIE 1: Blokada klonowania zawodników ---

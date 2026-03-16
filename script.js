@@ -173,30 +173,39 @@ defaultPositions.forEach((pos, i) => {
 
 document.querySelectorAll('.nav-btn').forEach(btn => {
     if(btn.id === 'logout-btn') return;
+    
     btn.addEventListener('click', function(e) {
+        if (this.classList.contains('dropbtn')) {
+            this.parentElement.classList.toggle('active');
+            return; 
+        }
+
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         this.classList.add('active');
         
         if (this.classList.contains('dropdown-item')) {
             document.querySelector('.dropbtn').classList.add('active');
+            this.closest('.dropdown').classList.remove('active');
         } else {
             document.querySelector('.dropbtn').classList.remove('active');
         }
 
-        document.querySelectorAll('.app-section').forEach(sec => sec.classList.remove('active-section'));
         const targetId = this.getAttribute('data-target');
-        document.getElementById(targetId).classList.add('active-section');
         
-        if(targetId === 'section-history') renderGameweekTabs();
-        if(targetId === 'section-transfers') renderTransfers();
-        if(targetId === 'section-best-team') { renderHallOfFame(); renderDreamTeam(); }
-        if(targetId === 'section-chart') renderGlobalStatsAndChart(); 
-        if(targetId === 'section-table') renderSummaryTable(); 
-        if(targetId === 'section-assistant') renderAssistantAlerts(); 
-        if(targetId === 'section-welcome') renderWelcomeStats();
-        if(targetId === 'section-league') renderLeagueTable();
-        // PODPIĘCIE NOWEJ ZAKŁADKI ARCHIWUM
-        if(targetId === 'section-historical') renderHistoricalSeasons();
+        if (targetId) {
+            document.querySelectorAll('.app-section').forEach(sec => sec.classList.remove('active-section'));
+            document.getElementById(targetId).classList.add('active-section');
+            
+            if(targetId === 'section-history') renderGameweekTabs();
+            if(targetId === 'section-transfers') renderTransfers();
+            if(targetId === 'section-best-team') { renderHallOfFame(); renderDreamTeam(); }
+            if(targetId === 'section-chart') renderGlobalStatsAndChart(); 
+            if(targetId === 'section-table') renderSummaryTable(); 
+            if(targetId === 'section-assistant') renderAssistantAlerts(); 
+            if(targetId === 'section-welcome') renderWelcomeStats();
+            if(targetId === 'section-league') renderLeagueTable();
+            if(targetId === 'section-historical') renderHistoricalSeasons();
+        }
     });
 });
 

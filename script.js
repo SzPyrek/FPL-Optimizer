@@ -159,9 +159,9 @@ defaultPositions.forEach((pos, i) => {
             <input type="radio" name="vcaptain" class="p-vcap" ${isVCapChecked}>
             <span class="vcap-icon" title="Wicekapitan">🥈</span>
         </label>
-        <label class="injury-toggle" title="Kontuzja / Blank">
+        <label class="injury-toggle" title="Nie grał (Blank / Kontuzja / Poza kadrą)">
             <input type="checkbox" class="p-inj">
-            <span class="inj-icon" title="Kontuzja">🚑</span>
+            <span class="inj-icon" title="Brak Gry (Blank)">🚫</span>
         </label>
         <label class="dgw-toggle" title="Double Gameweek">
             <input type="checkbox" class="p-dgw">

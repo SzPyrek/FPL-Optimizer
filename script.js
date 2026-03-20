@@ -395,7 +395,7 @@ function showGameweekDetails(gw) {
     let vcapNote = "";
     if (activeCap && activeCap.injured && gw.userData.userVCap) {
         activeCap = gw.userData.userVCap;
-        vcapNote = `<br><span style="color:orange; font-size:12px;">(Kapitan 🚑. Punktuje Wicekapitan)</span>`;
+        vcapNote = `<br><span style="color:#f39c12; font-size:12px;">(Kapitan 🚫. Punktuje Wicekapitan)</span>`;
     }
 
     let userCapPts = activeCap ? activeCap.points : 0; 

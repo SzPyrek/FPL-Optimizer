@@ -625,7 +625,10 @@ function renderAssistantAlerts() {
     Object.keys(playerTrends).forEach(name => {
         const stats = playerTrends[name];
         if (stats.isInjuredLast) {
-            alertsHtml += `<div class="alert-card alert-injury" style="color:#333;"><h4>🚑 Raport Medyczny: ${name}</h4><p>Pauzował w ostatniej kolejce. Upewnij się, czy wraca do zdrowia.</p></div>`;
+            alertsHtml += `<div class="alert-card alert-injury" style="color:#333; border-left: 4px solid #f39c12;">
+                <h4>🚫 Brak Występu: ${name}</h4>
+                <p>Pauzował w ostatniej kolejce (Blank, ławka trenerska lub uraz). Upewnij się, jaki jest jego status przed startem nowego GW!</p>
+            </div>`;
             return; 
         }
         if (stats.isBenchedLast && stats.ptsLast >= 5) {

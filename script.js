@@ -372,7 +372,7 @@ function generateLineupHtml(squadList, isOptimalView = false) {
         let isCap = isOptimalView ? p.isOptimalCaptain : p.isCaptain;
         let isVCap = !isOptimalView && p.isVCaptain ? ' <span style="color:gray;">🥈</span>' : '';
         let extraIcon = isCap ? ' <strong style="color:var(--fpl-burgundy);">©️</strong>' : isVCap;
-        let injText = p.injured ? ' <span style="color:red; font-size:12px;">(🚑)</span>' : '';
+        let injText = p.injured ? ' <span style="color:#f39c12; font-size:12px;" title="Brak gry / Blank">(🚫)</span>' : '';
         let dgwText = p.isDGW ? ' <span style="color:blue; font-size:12px;">(🔄)</span>' : '';
         let displayPoints = isOptimalView ? p.displayPts : p.points;
         html += `<li style="margin-bottom: 4px;"><strong style="color:#198754; width: 35px; display: inline-block;">${p.position}</strong> ${p.name}: <strong>${displayPoints} pkt</strong>${extraIcon}${injText}${dgwText}</li>`;

@@ -625,7 +625,7 @@ function renderAssistantAlerts() {
     Object.keys(playerTrends).forEach(name => {
         const stats = playerTrends[name];
         if (stats.isInjuredLast) {
-            alertsHtml += `<div class="alert-card alert-injury" style="color:#333; border-left: 4px solid #e90052;">
+            alertsHtml += `<div class="alert-card alert-injury" style="color:#333; border-left: 4px solid #f39c12;">
                 <h4>🚫 Brak Występu: ${name}</h4>
                 <p>Pauzował w ostatniej kolejce (Blank, ławka trenerska lub uraz). Upewnij się, jaki jest jego status przed startem nowego GW!</p>
             </div>`;
@@ -1193,7 +1193,7 @@ function renderLeagueTable() {
                     });
 
                     // 3. Sortujemy ranking. Podstawowy to suma wszystkich punktów.
-                    players.sort((a,b) => b.points - a.points); 
+                    players.sort((a,b) => b.commonPoints - a.commonPoints);
                     
                     let yearName = 2025 + idx;
                     let title = `Sezon ${yearName}/${yearName+1}`;
@@ -1634,8 +1634,12 @@ function renderHistoricalSeasons() {
             <h3 style="color: #ffd700; margin-top: 30px;">Ostateczna Drużyna Sezonu 🃏</h3>
             <div id="hist-pitch-${index}" class="football-pitch" style="min-height: 450px;"></div>
             
-            <div style="margin-top: 20px; text-align: right; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
-                <button class="delete-single-btn" style="background-color: #e90052; color: white; border: 1px solid #900032; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s;">🗑️ Usuń ten sezon z Archiwum</button>
+            <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="download-hist-pitch-btn" data-id="hist-pitch-${index}" style="background-color: #28a745; color: white; border: 1px solid #1e7e34; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s;">📸 Pobierz Zdjęcie TOTS</button>
+                    <button class="download-hist-json-btn" style="background-color: #f39c12; color: white; border: 1px solid #d68910; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s;">💾 Pobierz Kopię (JSON)</button>
+                </div>
+                <button class="delete-single-btn" style="background-color: #e90052; color: white; border: 1px solid #900032; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-size: 14px; font-weight: bold; transition: 0.2s;">🗑️ Usuń Sezon</button>
             </div>
         `;
 
@@ -1676,6 +1680,39 @@ function renderHistoricalSeasons() {
             }
         });
 
+        // LOGIKA POBIERANIA ZDJĘCIA ARCHIWALNEGO TOTS
+        const pitchBtn = content.querySelector('.download-hist-pitch-btn');
+        pitchBtn.addEventListener('click', (e) => {
+            const targetId = e.target.getAttribute('data-id');
+            const pitchElem = document.getElementById(targetId);
+            if(pitchElem) {
+                html2canvas(pitchElem, { backgroundColor: null }).then(canvas => {
+                    const link = document.createElement('a'); 
+                    // Zamieniamy slash (/) na podkreślnik (_) żeby nazwa pliku była poprawna dla Windowsa
+                    const safeName = pastSeason.seasonName.replace(/\//g, '_');
+                    link.download = `fpl_tots_${safeName}.png`;
+                    link.href = canvas.toDataURL('image/png'); 
+                    link.click();
+                });
+            }
+        });
+
+        // LOGIKA POBIERANIA KOPII JSON Z KONKRETNEGO ARCHIWUM
+        const jsonBtn = content.querySelector('.download-hist-json-btn');
+        jsonBtn.addEventListener('click', () => {
+            const data = JSON.stringify(pastSeason.archive);
+            const blob = new Blob([data], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a'); 
+            const safeName = pastSeason.seasonName.replace(/\//g, '_');
+            a.href = url; 
+            a.download = `fpl_backup_${safeName}.json`;
+            document.body.appendChild(a); 
+            a.click(); 
+            document.body.removeChild(a); 
+            URL.revokeObjectURL(url);
+        });
+        
         seasonDiv.appendChild(header);
         seasonDiv.appendChild(content);
         container.appendChild(seasonDiv);

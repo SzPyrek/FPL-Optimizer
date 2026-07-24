@@ -47,6 +47,7 @@
                     <button class="nav-btn dropdown-item" data-target="section-chart">Wykres Formy 📊</button>
                     <button class="nav-btn dropdown-item" data-target="section-table">Tabela Zawodników 📋</button>
                     <button class="nav-btn dropdown-item" data-target="section-assistant">Asystent FPL 🤖</button>
+                    <button class="nav-btn dropdown-item" data-target="section-tracked-transfers">Analiza Transferów 🔄</button>
                     <button class="nav-btn dropdown-item" data-target="section-historical">Archiwum Sezonów 🏛️</button>
                 </div>
             </div>
@@ -87,15 +88,15 @@
                         </div>
                     </div>
 
-                    <!-- NOWOŚĆ: MODUŁ ŚLEDZENIA TRANSFERÓW -->
-                    <div class="glass-panel" style="margin-top: 30px; margin-bottom: 20px;">
-                        <h3 style="color: #00ff87; margin-bottom: 5px;">🔄 Długoterminowe Śledzenie Transferów</h3>
-                        <p style="font-size: 13px; color: #ccc; margin-bottom: 15px;">Aplikacja sama przepisze te nazwiska do kolejnego GW, gdy użyjesz "Wczytaj ostatni skład". Wpisuj tylko nowe punkty!</p>
+                    <!-- MODUŁ ŚLEDZENIA TRANSFERÓW (JASNY MOTYW) -->
+                    <div style="background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 15px; margin-top: 25px; margin-bottom: 20px;">
+                        <h3 style="color: var(--fpl-purple); margin-top: 0; margin-bottom: 5px;">🔄 Długoterminowe Śledzenie Transferów</h3>
+                        <p style="font-size: 13px; color: #555; margin-bottom: 15px;">Aplikacja sama przepisze te nazwiska do kolejnego GW, gdy użyjesz "Wczytaj ostatni skład". Wpisuj tylko nowe punkty!</p>
             
-                    <div id="tracked-transfers-container"></div>
+                        <div id="tracked-transfers-container"></div>
             
-                        <button id="add-tracked-transfer-btn" class="action-btn" style="background-color: #37003c; border: 1px solid #00ff87; padding: 10px; font-size: 14px; margin-top: 10px; cursor: pointer;">
-                            ➕ Dodaj transfer do obserwacji
+                        <button id="add-tracked-transfer-btn" class="btn-primary" style="background-color: var(--fpl-blue); color: var(--fpl-purple); padding: 8px 15px; font-size: 13px; margin-top: 10px;">
+                            ➕ Dodaj parę do obserwacji
                         </button>
                     </div>
                     <button id="calculate-btn" class="btn-primary">Oblicz i Zapisz GW</button>
@@ -220,6 +221,9 @@
                 <h2 style="margin-top: 0;">Archiwum Sezonów 🏛️</h2>
                 <p>Tutaj spoczywają legendy. Historia Twoich poprzednich kampanii menedżerskich.</p>
                 <div id="historical-container"></div>
+            </div>
+            <div id="section-tracked-transfers" class="app-section">
+                <!-- Tu wpadnie tabela z JS -->
             </div>
             <div id="section-settings" class="app-section">
             <h2>Zarządzanie Danymi</h2>

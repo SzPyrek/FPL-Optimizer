@@ -202,6 +202,7 @@ document.querySelectorAll('.nav-btn').forEach(btn => {
             if(targetId === 'section-chart') renderGlobalStatsAndChart(); 
             if(targetId === 'section-table') renderSummaryTable(); 
             if(targetId === 'section-assistant') renderAssistantAlerts(); 
+            if(targetId === 'section-tracked-transfers') renderTrackedTransfersReport(); // <--- TO DODAJ
             if(targetId === 'section-welcome') renderWelcomeStats();
             if(targetId === 'section-league') renderLeagueTable();
             if(targetId === 'section-historical') renderHistoricalSeasons();
@@ -322,13 +323,38 @@ function updatePlayerDatalist() {
     });
 }
 
+// Ta funkcja obsługuje główną zakładkę "Transfery"
 function renderTransfers() {
-    const container = document.getElementById('section-transfers');
-    let html = `<h2 style="color: #00ff87; text-align: center; margin-bottom: 20px;">Raport Śledzonych Transferów 📊</h2>`;
+    let archive = getArchive();
+    const container = document.getElementById('transfers-container');
+    container.innerHTML = '';
+    if (archive.length < 2) { container.innerHTML = '<p>Brak danych o transferach (min. 2 kolejki).</p>'; return; }
+    
+    let sortedAsc = [...archive].sort((a,b) => a.gwNumber - b.gwNumber);
+    for (let i = sortedAsc.length - 1; i > 0; i--) {
+        const currGW = sortedAsc[i], prevGW = sortedAsc[i-1];
+        const currNames = currGW.squad.map(p => p.name.trim().toLowerCase());
+        const prevNames = prevGW.squad.map(p => p.name.trim().toLowerCase());
+        const transfersIn = currGW.squad.filter(p => p.name.trim() !== "" && !prevNames.includes(p.name.trim().toLowerCase()));
+        const transfersOut = prevGW.squad.filter(p => p.name.trim() !== "" && !currNames.includes(p.name.trim().toLowerCase()));
+
+        if (transfersIn.length > 0 || transfersOut.length > 0) {
+            let inHtml = transfersIn.map(p => `🟢 Przyszli: ${p.name} (${p.position})`).join('<br>');
+            let outHtml = transfersOut.map(p => `🔴 Odeszli: ${p.name} (${p.position})`).join('<br>');
+            container.innerHTML += `<div class="transfer-card" style="color: #333;"><h3 style="margin-top:0; color:var(--fpl-purple);">Przed GW ${currGW.gwNumber}</h3><p class="transfer-in">${inHtml}</p><p class="transfer-out">${outHtml}</p></div>`;
+        }
+    }
+    if (container.innerHTML === '') container.innerHTML = '<p>Brak transferów pomiędzy kolejkami.</p>';
+}
+
+// Ta funkcja obsługuje nową zakładkę z dropdowna "Analiza Transferów"
+function renderTrackedTransfersReport() {
+    const container = document.getElementById('section-tracked-transfers');
+    let html = `<h2 style="margin-top: 0;">Analiza Obserwowanych Transferów 🔄</h2>
+                <p>System śledzi długoterminowy zysk lub stratę z podjętych przez Ciebie decyzji transferowych wpisanych w kalkulatorze.</p>`;
     
     let transferStats = {};
     
-    // Zbieramy dane ze wszystkich zapisanych kolejek
     globalArchive.forEach(gw => {
         if(gw.userData && gw.userData.trackedTransfers) {
             gw.userData.trackedTransfers.forEach(t => {
@@ -345,7 +371,7 @@ function renderTransfers() {
 
     const keys = Object.keys(transferStats);
     if (keys.length === 0) {
-        container.innerHTML = html + `<div class="glass-panel" style="text-align:center;"><p>Nie śledzisz jeszcze żadnych długoterminowych transferów. Dodaj je w Kalkulatorze!</p></div>`;
+        container.innerHTML = html + `<div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); text-align: center;"><p>Nie śledzisz jeszcze żadnych długoterminowych transferów. Dodaj je na dole Kalkulatora!</p></div>`;
         return;
     }
 
@@ -365,23 +391,24 @@ function renderTransfers() {
     keys.forEach(k => {
         const data = transferStats[k];
         const diff = data.inPts - data.outPts;
-        let diffColor = diff > 0 ? "#00ff87" : (diff < 0 ? "#e90052" : "white");
+        let diffColor = diff > 0 ? "var(--fpl-green)" : (diff < 0 ? "#e90052" : "white");
         let diffSign = diff > 0 ? "+" : "";
         let verdict = diff > 0 ? "🔥 Udany" : (diff < 0 ? "📉 Niewypał" : "⚖️ Remis");
         
         html += `
-            <tr style="text-align: center;">
-                <td style="font-weight: bold;">${data.inName} <br><span style="font-size: 12px; color: #aaa;">(${data.inPts} pkt)</span></td>
-                <td style="font-weight: bold;">${data.outName} <br><span style="font-size: 12px; color: #aaa;">(${data.outPts} pkt)</span></td>
-                <td>${data.weeks} GW</td>
-                <td style="color: ${diffColor}; font-weight: bold; font-size: 18px;">${diffSign}${diff}</td>
-                <td>${verdict}</td>
+            <tr style="text-align: center; color: #333;">
+                <td style="font-weight: bold;">${data.inName} <br><span style="font-size: 12px; color: #666;">(${data.inPts} pkt)</span></td>
+                <td style="font-weight: bold;">${data.outName} <br><span style="font-size: 12px; color: #666;">(${data.outPts} pkt)</span></td>
+                <td style="font-weight: bold;">${data.weeks} GW</td>
+                <td style="color: ${diffColor}; font-weight: bold; font-size: 20px; background: rgba(0,0,0,0.03);">${diffSign}${diff}</td>
+                <td style="font-weight: bold;">${verdict}</td>
             </tr>`;
     });
 
     html += `</tbody></table></div>`;
     container.innerHTML = html;
 }
+
 
 function renderGameweekTabs() {
     const archive = getArchive();
@@ -1902,21 +1929,21 @@ if(document.getElementById('add-tracked-transfer-btn')) {
 function addTrackedTransferRow(inName = "", inPts = 0, outName = "", outPts = 0) {
     const div = document.createElement('div');
     div.className = 'tracked-row';
-    div.style.cssText = "display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; border-left: 3px solid #00ff87;";
+    div.style.cssText = "display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; background: #fff; border: 1px solid #ccc; padding: 10px; border-radius: 5px; border-left: 4px solid var(--fpl-purple);";
     
     div.innerHTML = `
         <div style="flex: 1; display: flex; gap: 5px; align-items: center; min-width: 150px;">
-            <span style="color: #00ff87; font-size: 18px;" title="Kupiony">🟢</span>
-            <input type="text" class="t-in-name input-dark" placeholder="Kupiłem (Kto?)" value="${inName}" style="flex: 1; padding: 8px;">
-            <input type="number" class="t-in-pts input-dark" placeholder="Pkt" value="${inPts}" style="width: 60px; padding: 8px;">
+            <span style="color: #28a745; font-size: 18px;" title="Kupiony">🟢</span>
+            <input type="text" class="t-in-name" placeholder="Kupiłem (Kto?)" value="${inName}" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <input type="number" class="t-in-pts" placeholder="Pkt" value="${inPts}" style="width: 60px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
         </div>
-        <div style="font-weight: bold; color: #aaa; padding: 0 10px;">VS</div>
+        <div style="font-weight: bold; color: #555; padding: 0 10px;">VS</div>
         <div style="flex: 1; display: flex; gap: 5px; align-items: center; min-width: 150px;">
-            <span style="color: #e90052; font-size: 18px;" title="Sprzedany">🔴</span>
-            <input type="text" class="t-out-name input-dark" placeholder="Sprzedałem (Kto?)" value="${outName}" style="flex: 1; padding: 8px;">
-            <input type="number" class="t-out-pts input-dark" placeholder="Pkt" value="${outPts}" style="width: 60px; padding: 8px;">
+            <span style="color: #dc3545; font-size: 18px;" title="Sprzedany">🔴</span>
+            <input type="text" class="t-out-name" placeholder="Sprzedałem (Kto?)" value="${outName}" style="flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+            <input type="number" class="t-out-pts" placeholder="Pkt" value="${outPts}" style="width: 60px; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
         </div>
-        <button class="remove-t-btn" style="background: #e90052; border: none; color: white; border-radius: 3px; cursor: pointer; padding: 8px 12px; font-weight: bold;">✖</button>
+        <button class="remove-t-btn" style="background: #e90052; border: none; color: white; border-radius: 4px; cursor: pointer; padding: 8px 12px; font-weight: bold;">✖</button>
     `;
     
     div.querySelector('.remove-t-btn').addEventListener('click', () => div.remove());

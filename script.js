@@ -323,26 +323,64 @@ function updatePlayerDatalist() {
 }
 
 function renderTransfers() {
-    let archive = getArchive();
-    const container = document.getElementById('transfers-container');
-    container.innerHTML = '';
-    if (archive.length < 2) { container.innerHTML = '<p>Brak danych o transferach (min. 2 kolejki).</p>'; return; }
+    const container = document.getElementById('section-transfers');
+    let html = `<h2 style="color: #00ff87; text-align: center; margin-bottom: 20px;">Raport Śledzonych Transferów 📊</h2>`;
     
-    archive.sort((a, b) => a.gwNumber - b.gwNumber);
-    for (let i = archive.length - 1; i > 0; i--) {
-        const currGW = archive[i], prevGW = archive[i-1];
-        const currNames = currGW.squad.map(p => p.name.trim().toLowerCase()).filter(n => n !== "");
-        const prevNames = prevGW.squad.map(p => p.name.trim().toLowerCase()).filter(n => n !== "");
-        const transfersIn = currGW.squad.filter(p => p.name.trim() !== "" && !prevNames.includes(p.name.trim().toLowerCase()));
-        const transfersOut = prevGW.squad.filter(p => p.name.trim() !== "" && !currNames.includes(p.name.trim().toLowerCase()));
-
-        if (transfersIn.length > 0 || transfersOut.length > 0) {
-            let inHtml = transfersIn.map(p => `🟢 Przyszli: ${p.name} (${p.position})`).join('<br>');
-            let outHtml = transfersOut.map(p => `🔴 Odeszli: ${p.name} (${p.position})`).join('<br>');
-            container.innerHTML += `<div class="transfer-card" style="color: #333;"><h3 style="margin-top:0; color:var(--fpl-purple);">Przed GW ${currGW.gwNumber}</h3><p class="transfer-in">${inHtml}</p><p class="transfer-out">${outHtml}</p></div>`;
+    let transferStats = {};
+    
+    // Zbieramy dane ze wszystkich zapisanych kolejek
+    globalArchive.forEach(gw => {
+        if(gw.userData && gw.userData.trackedTransfers) {
+            gw.userData.trackedTransfers.forEach(t => {
+                const key = `${t.inName} 🔄 ${t.outName}`;
+                if(!transferStats[key]) {
+                    transferStats[key] = { inName: t.inName, outName: t.outName, inPts: 0, outPts: 0, weeks: 0 };
+                }
+                transferStats[key].inPts += t.inPts;
+                transferStats[key].outPts += t.outPts;
+                transferStats[key].weeks += 1;
+            });
         }
+    });
+
+    const keys = Object.keys(transferStats);
+    if (keys.length === 0) {
+        container.innerHTML = html + `<div class="glass-panel" style="text-align:center;"><p>Nie śledzisz jeszcze żadnych długoterminowych transferów. Dodaj je w Kalkulatorze!</p></div>`;
+        return;
     }
-    if (container.innerHTML === '') container.innerHTML = '<p>Brak transferów pomiędzy kolejkami.</p>';
+
+    html += `<div style="overflow-x: auto;">
+        <table class="summary-table" style="width: 100%; min-width: 600px;">
+            <thead>
+                <tr>
+                    <th>Kupiłeś 🟢</th>
+                    <th>Sprzedałeś 🔴</th>
+                    <th>Czas śledzenia</th>
+                    <th>Zysk / Strata (Pkt)</th>
+                    <th>Werdykt</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    keys.forEach(k => {
+        const data = transferStats[k];
+        const diff = data.inPts - data.outPts;
+        let diffColor = diff > 0 ? "#00ff87" : (diff < 0 ? "#e90052" : "white");
+        let diffSign = diff > 0 ? "+" : "";
+        let verdict = diff > 0 ? "🔥 Udany" : (diff < 0 ? "📉 Niewypał" : "⚖️ Remis");
+        
+        html += `
+            <tr style="text-align: center;">
+                <td style="font-weight: bold;">${data.inName} <br><span style="font-size: 12px; color: #aaa;">(${data.inPts} pkt)</span></td>
+                <td style="font-weight: bold;">${data.outName} <br><span style="font-size: 12px; color: #aaa;">(${data.outPts} pkt)</span></td>
+                <td>${data.weeks} GW</td>
+                <td style="color: ${diffColor}; font-weight: bold; font-size: 18px;">${diffSign}${diff}</td>
+                <td>${verdict}</td>
+            </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+    container.innerHTML = html;
 }
 
 function renderGameweekTabs() {
@@ -831,6 +869,14 @@ document.getElementById('load-last-squad-btn').addEventListener('click', functio
             rows[index].querySelector('.p-dgw').checked = false; 
         }
     });
+    // Wczytywanie śledzonych transferów (zachowujemy nazwiska, zerujemy punkty!)
+        const trackCont = document.getElementById('tracked-transfers-container');
+        if (trackCont) trackCont.innerHTML = '';
+        if (archive[0].userData && archive[0].userData.trackedTransfers) {
+            archive[0].userData.trackedTransfers.forEach(t => {
+                addTrackedTransferRow(t.inName, 0, t.outName, 0);
+            });
+        }
     alert(`Pomyślnie wczytano skład z GW ${archive[0].gwNumber}. Jesteś gotowy na GW ${currentGW}!`);
 });
 
@@ -1027,7 +1073,16 @@ document.getElementById('calculate-btn').addEventListener('click', function() {
     const optimalResult = calculateOptimalPoints(currentSquad, currentChip);
     const optimalData = { points: optimalResult.points, lineup: optimalResult.lineup, bestCap: bestCaptain };
     const userPoints = calculateUserPoints(currentSquad, currentChip); 
-    const userData = { points: userPoints, userCap: userCaptain, userVCap: userVCaptain };
+    let trackedTransfers = [];
+    document.querySelectorAll('.tracked-row').forEach(row => {
+        const inName = row.querySelector('.t-in-name').value.trim();
+        const inPts = parseInt(row.querySelector('.t-in-pts').value) || 0;
+        const outName = row.querySelector('.t-out-name').value.trim();
+        const outPts = parseInt(row.querySelector('.t-out-pts').value) || 0;
+        if (inName || outName) { trackedTransfers.push({ inName, inPts, outName, outPts }); }
+    });
+    
+    const userData = { points: userPoints, userCap: userCaptain, userVCap: userVCaptain, trackedTransfers: trackedTransfers };
 
     document.getElementById('results').style.display = 'block';
     document.getElementById('res-gw').innerText = currentGW;
@@ -1831,4 +1886,39 @@ if (mobileBtn && navContainer) {
             }
         });
     });
+}
+
+// ==========================================
+// 11. DŁUGOTERMINOWE ŚLEDZENIE TRANSFERÓW
+// ==========================================
+const trackedContainer = document.getElementById('tracked-transfers-container');
+
+if(document.getElementById('add-tracked-transfer-btn')) {
+    document.getElementById('add-tracked-transfer-btn').addEventListener('click', () => {
+        addTrackedTransferRow();
+    });
+}
+
+function addTrackedTransferRow(inName = "", inPts = 0, outName = "", outPts = 0) {
+    const div = document.createElement('div');
+    div.className = 'tracked-row';
+    div.style.cssText = "display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; border-left: 3px solid #00ff87;";
+    
+    div.innerHTML = `
+        <div style="flex: 1; display: flex; gap: 5px; align-items: center; min-width: 150px;">
+            <span style="color: #00ff87; font-size: 18px;" title="Kupiony">🟢</span>
+            <input type="text" class="t-in-name input-dark" placeholder="Kupiłem (Kto?)" value="${inName}" style="flex: 1; padding: 8px;">
+            <input type="number" class="t-in-pts input-dark" placeholder="Pkt" value="${inPts}" style="width: 60px; padding: 8px;">
+        </div>
+        <div style="font-weight: bold; color: #aaa; padding: 0 10px;">VS</div>
+        <div style="flex: 1; display: flex; gap: 5px; align-items: center; min-width: 150px;">
+            <span style="color: #e90052; font-size: 18px;" title="Sprzedany">🔴</span>
+            <input type="text" class="t-out-name input-dark" placeholder="Sprzedałem (Kto?)" value="${outName}" style="flex: 1; padding: 8px;">
+            <input type="number" class="t-out-pts input-dark" placeholder="Pkt" value="${outPts}" style="width: 60px; padding: 8px;">
+        </div>
+        <button class="remove-t-btn" style="background: #e90052; border: none; color: white; border-radius: 3px; cursor: pointer; padding: 8px 12px; font-weight: bold;">✖</button>
+    `;
+    
+    div.querySelector('.remove-t-btn').addEventListener('click', () => div.remove());
+    trackedContainer.appendChild(div);
 }
